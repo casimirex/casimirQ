@@ -26,6 +26,9 @@ import { PostgresCircuitsRepository } from './repositories/postgres-circuits.rep
 import { SimulationsRepository } from './repositories/simulations.repository';
 import { InMemorySimulationsRepository } from './repositories/in-memory-simulations.repository';
 import { PostgresSimulationsRepository } from './repositories/postgres-simulations.repository';
+import { UsersRepository } from './repositories/users.repository';
+import { InMemoryUsersRepository } from './repositories/in-memory-users.repository';
+import { PostgresUsersRepository } from './repositories/postgres-users.repository';
 
 // Guards
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -71,6 +74,10 @@ import { JobsGateway } from './gateways/jobs.gateway';
       useClass: process.env.DATABASE_URL
         ? PostgresSimulationsRepository
         : InMemorySimulationsRepository,
+    },
+    {
+      provide: UsersRepository,
+      useClass: process.env.DATABASE_URL ? PostgresUsersRepository : InMemoryUsersRepository,
     },
     JwtAuthGuard,
     RateLimitGuard,

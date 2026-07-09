@@ -2,15 +2,24 @@
  * Authentication Service
  *
  * Real JWT authentication: signs and verifies tokens with a server-side
- * secret (via @nestjs/jwt) and checks passwords against bcrypt hashes.
+ * secret (via @nestjs/jwt) and checks passwords against bcrypt hashes stored
+ * in the UsersRepository (in-memory or Postgres).
  *
- * The user store is an in-memory seed for now — replace `users` with a
- * database-backed user repository (and a signup flow) for production.
+ * On startup the demo/admin accounts are seeded idempotently so the sample
+ * credentials keep working; set SEED_DEMO_USERS=false to disable.
  */
 
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService, TokenExpiredError } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { StoredUser, UsersRepository } from '../repositories/users.repository';
 
 export interface TokenPayload {
   sub: string;
@@ -30,36 +39,43 @@ export interface TokenResponse {
   token_type: string;
 }
 
-interface StoredUser {
-  userId: string;
-  email: string;
-  passwordHash: string;
-}
-
 const EXPIRES_IN_SECONDS = 3600; // 1 hour
+const BCRYPT_ROUNDS = 10;
+const MIN_PASSWORD_LENGTH = 6;
 
 // A constant valid hash used to equalize timing when the email is unknown,
 // reducing a user-enumeration side channel on the login endpoint.
-const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
+const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', BCRYPT_ROUNDS);
+
+const DEMO_USERS = [
+  { email: 'demo@example.com', password: 'demo' },
+  { email: 'admin@example.com', password: 'admin123' },
+];
 
 @Injectable()
-export class AuthService {
-  private readonly users: StoredUser[];
+export class AuthService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(AuthService.name);
 
-  constructor(private readonly jwt: JwtService) {
-    const salt = bcrypt.genSaltSync(10);
-    this.users = [
-      {
-        userId: 'demo-user-id',
-        email: 'demo@example.com',
-        passwordHash: bcrypt.hashSync('demo', salt),
-      },
-      {
-        userId: 'admin-user-id',
-        email: 'admin@example.com',
-        passwordHash: bcrypt.hashSync('admin123', salt),
-      },
-    ];
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly users: UsersRepository,
+  ) {}
+
+  // Runs after every module's onModuleInit (so a DB-backed users table has
+  // already been created) — seed the demo accounts idempotently.
+  async onApplicationBootstrap(): Promise<void> {
+    if (process.env.SEED_DEMO_USERS === 'false') {
+      return;
+    }
+    for (const demo of DEMO_USERS) {
+      const email = normalizeEmail(demo.email);
+      if (!(await this.users.findByEmail(email))) {
+        await this.users.create({
+          email,
+          passwordHash: await bcrypt.hash(demo.password, BCRYPT_ROUNDS),
+        });
+      }
+    }
   }
 
   /**
@@ -93,8 +109,9 @@ export class AuthService {
    * Authenticate credentials against the user store (bcrypt password check).
    */
   async authenticateUser(credentials: UserCredentials): Promise<TokenResponse | null> {
-    const user = this.users.find((u) => u.email === credentials.email);
+    const email = normalizeEmail(credentials.email ?? '');
     const password = credentials.password ?? '';
+    const user = await this.users.findByEmail(email);
 
     if (!user) {
       // Compare against a dummy hash so response time does not reveal whether
@@ -108,7 +125,36 @@ export class AuthService {
       return null;
     }
 
-    return this.generateToken({ sub: user.userId, email: user.email });
+    return this.generateToken({ sub: user.id, email: user.email });
+  }
+
+  /**
+   * Register a new user and return an access token (auto-login).
+   */
+  async registerUser(
+    credentials: UserCredentials,
+  ): Promise<{ token: TokenResponse; user: { id: string; email: string } }> {
+    const email = normalizeEmail(credentials.email ?? '');
+    const password = credentials.password ?? '';
+
+    if (!isValidEmail(email)) {
+      throw new BadRequestException('A valid email is required');
+    }
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      throw new BadRequestException(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
+    }
+    if (await this.users.findByEmail(email)) {
+      throw new ConflictException('Email already registered');
+    }
+
+    const user = await this.users.create({
+      email,
+      passwordHash: await bcrypt.hash(password, BCRYPT_ROUNDS),
+    });
+    this.logger.log(`Registered new user ${user.email}`);
+
+    const token = await this.generateToken({ sub: user.id, email: user.email });
+    return { token, user: { id: user.id, email: user.email } };
   }
 
   /**
@@ -127,3 +173,14 @@ export class AuthService {
     return decoded && typeof decoded === 'object' ? (decoded as TokenPayload) : null;
   }
 }
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// Re-exported for tests that need the stored-user shape.
+export type { StoredUser };

@@ -43,6 +43,16 @@ export class AuthController {
   }
 
   /**
+   * Register a new account and return a token (auto-login).
+   */
+  @Post('signup')
+  @HttpCode(HttpStatus.CREATED)
+  async signup(@Body() credentials: UserCredentials) {
+    const { token, user } = await this.authService.registerUser(credentials);
+    return { ...token, user };
+  }
+
+  /**
    * Refresh JWT token
    */
   @Post('refresh')

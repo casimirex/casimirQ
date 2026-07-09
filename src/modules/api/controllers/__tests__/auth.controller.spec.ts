@@ -8,15 +8,18 @@ import { AuthController } from '../auth.controller';
 import { AuthService } from '../../services/auth.service';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InMemoryUsersRepository } from '../../repositories/in-memory-users.repository';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: AuthService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     authService = new AuthService(
       new JwtService({ secret: 'test-secret', signOptions: { expiresIn: '1h' } }),
+      new InMemoryUsersRepository(),
     );
+    await authService.onApplicationBootstrap(); // seed demo users
     controller = new AuthController(authService);
   });
 
@@ -34,6 +37,22 @@ describe('AuthController', () => {
       const credentials = { email: 'invalid@example.com', password: 'wrong' };
 
       await expect(controller.login(credentials)).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('signup', () => {
+    it('registers a new user and returns a token + user', async () => {
+      const result = await controller.signup({
+        email: 'brand@new.com',
+        password: 'secret123',
+      });
+      expect(result).toHaveProperty('access_token');
+      expect(result.user).toHaveProperty('email', 'brand@new.com');
+      expect(result.user).toHaveProperty('id');
+
+      // The new account can log in.
+      const login = await controller.login({ email: 'brand@new.com', password: 'secret123' });
+      expect(login).toHaveProperty('access_token');
     });
   });
 

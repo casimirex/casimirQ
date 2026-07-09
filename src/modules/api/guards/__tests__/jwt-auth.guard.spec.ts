@@ -8,6 +8,7 @@ import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../jwt-auth.guard';
 import { AuthService } from '../../services/auth.service';
+import { InMemoryUsersRepository } from '../../repositories/in-memory-users.repository';
 
 const SECRET = 'test-secret';
 
@@ -25,7 +26,7 @@ describe('JwtAuthGuard', () => {
 
   beforeEach(() => {
     jwt = new JwtService({ secret: SECRET, signOptions: { expiresIn: '1h' } });
-    guard = new JwtAuthGuard(new AuthService(jwt));
+    guard = new JwtAuthGuard(new AuthService(jwt, new InMemoryUsersRepository()));
   });
 
   it('allows a request with a genuine token', async () => {
