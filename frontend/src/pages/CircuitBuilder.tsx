@@ -140,6 +140,7 @@ export function CircuitBuilder() {
       circuitId: currentId ?? 'circuit-builder',
       numQubits,
       operations,
+      circuitName: circuitName.trim() || 'Untitled Circuit',
       shots: 1024,
     });
   };

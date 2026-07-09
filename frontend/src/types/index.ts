@@ -110,6 +110,42 @@ export interface SimulationResult {
   };
 }
 
+/** Results payload shared by simulate responses and stored runs. */
+export interface SimulationResultsPayload {
+  statevector: SimulationAmplitude[];
+  probabilities: Record<string, number>;
+  counts: Record<string, number>;
+}
+
+/** A persisted simulation run (summary row on the Simulations page). */
+export interface SimulationRunSummary {
+  id: string;
+  circuitId: string | null;
+  circuitName: string;
+  engine: SimulationEngine;
+  shots: number;
+  numQubits: number;
+  status: 'completed' | 'failed';
+  executionTimeMs: number;
+  createdAt: string;
+}
+
+/** A persisted simulation run including its results. */
+export interface SimulationRunDetail extends SimulationRunSummary {
+  results: SimulationResultsPayload;
+}
+
+/** Response from GET /simulations. */
+export interface SimulationListResponse {
+  simulations: SimulationRunSummary[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface Complex {
   real: number;
   imaginary: number;

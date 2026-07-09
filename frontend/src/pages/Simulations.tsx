@@ -1,155 +1,156 @@
 /**
  * Simulations Page
- * List of simulation jobs and results
+ * Real simulation-run history, backed by the persistence API.
  */
 
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useSimulations, useSimulation } from '@/api/hooks/useSimulations';
+import { SimulationResults } from '@/components/simulation/SimulationResults';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import {
-  Play,
-  Clock,
-  CheckCircle,
-  XCircle,
-  RotateCw,
-  Filter,
-} from 'lucide-react';
+import type { SimulationRunSummary, SimulationResult } from '@/types';
+import { Play, CheckCircle, XCircle, Cpu, Clock } from 'lucide-react';
 
-// Mock simulation jobs
-const mockJobs = [
-  {
-    id: '1',
-    circuitId: 'circuit-1',
-    circuitName: 'Bell State',
+/** Adapt a stored run's detail into the shape SimulationResults expects. */
+function toResultProps(detail: {
+  id: string;
+  circuitId: string | null;
+  engine: SimulationResult['requestedEngine'];
+  shots: number;
+  numQubits: number;
+  status: 'completed' | 'failed';
+  executionTimeMs: number;
+  results: SimulationResult['results'];
+}): SimulationResult {
+  return {
+    circuitId: detail.circuitId ?? '',
+    jobId: detail.id,
     status: 'completed',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    executionTime: 1250,
-  },
-  {
-    id: '2',
-    circuitId: 'circuit-2',
-    circuitName: 'Grover Search',
-    status: 'running',
-    createdAt: new Date(Date.now() - 600000).toISOString(),
-    executionTime: null,
-  },
-  {
-    id: '3',
-    circuitId: 'circuit-3',
-    circuitName: 'QFT 4-qubit',
-    status: 'queued',
-    createdAt: new Date(Date.now() - 120000).toISOString(),
-    executionTime: null,
-  },
-];
-
-const statusIcons = {
-  completed: <CheckCircle className="h-5 w-5 text-green-500" />,
-  running: <RotateCw className="h-5 w-5 text-blue-500 animate-spin" />,
-  queued: <Clock className="h-5 w-5 text-amber-500" />,
-  failed: <XCircle className="h-5 w-5 text-red-500" />,
-};
-
-const statusStyles = {
-  completed: 'bg-green-500/10 text-green-500 border-green-500/20',
-  running: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  queued: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-  failed: 'bg-red-500/10 text-red-500 border-red-500/20',
-};
+    numQubits: detail.numQubits,
+    requestedEngine: detail.engine,
+    shots: detail.shots,
+    results: detail.results,
+    metadata: { executionTimeMs: detail.executionTimeMs, memoryUsageBytes: 0 },
+  };
+}
 
 export function Simulations() {
+  const { data, isLoading } = useSimulations(1, 50);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { data: selected } = useSimulation(selectedId);
+
+  const runs = data?.simulations ?? [];
+  const total = data?.pagination.total ?? runs.length;
+  const completed = runs.filter((r) => r.status === 'completed').length;
+  const failed = runs.filter((r) => r.status === 'failed').length;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Simulations</h1>
-          <p className="text-muted-foreground mt-1">
-            Run and monitor quantum circuit simulations
-          </p>
+          <p className="text-muted-foreground mt-1">Your quantum circuit simulation runs</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" leftIcon={<Filter className="h-4 w-4" />}>
-            Filter
-          </Button>
-          <Button leftIcon={<Play className="h-4 w-4" />}>
-            New Simulation
-          </Button>
-        </div>
+        <Link to="/circuits">
+          <Button leftIcon={<Play className="h-4 w-4" />}>New Simulation</Button>
+        </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="glass">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">Total Simulations</p>
+            <div className="text-2xl font-bold">{total}</div>
+            <p className="text-xs text-muted-foreground">Total Runs</p>
           </CardContent>
         </Card>
         <Card className="glass">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-500">8</div>
+            <div className="text-2xl font-bold text-green-500">{completed}</div>
             <p className="text-xs text-muted-foreground">Completed</p>
           </CardContent>
         </Card>
         <Card className="glass">
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-500">2</div>
-            <p className="text-xs text-muted-foreground">Running</p>
-          </CardContent>
-        </Card>
-        <Card className="glass">
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-amber-500">2</div>
-            <p className="text-xs text-muted-foreground">Queued</p>
+            <div className="text-2xl font-bold text-red-500">{failed}</div>
+            <p className="text-xs text-muted-foreground">Failed</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Jobs list */}
+      {/* Runs list */}
       <Card className="glass">
         <CardHeader>
           <CardTitle>Recent Simulations</CardTitle>
-          <CardDescription>View simulation results and logs</CardDescription>
+          <CardDescription>Select a run to view its results</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {mockJobs.map((job) => (
-              <div
-                key={job.id}
-                className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  {statusIcons[job.status as keyof typeof statusIcons]}
-                  <div>
-                    <p className="font-medium">{job.circuitName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Circuit ID: {job.circuitId}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                      statusStyles[job.status as keyof typeof statusStyles]
-                    }`}
-                  >
-                    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                  </span>
-                  <div className="text-right text-sm text-muted-foreground">
-                    <p>{new Date(job.createdAt).toLocaleString()}</p>
-                    {job.executionTime && (
-                      <p>{(job.executionTime / 1000).toFixed(2)}s</p>
+          {isLoading ? (
+            <div className="py-8 text-center text-muted-foreground">Loading simulations…</div>
+          ) : runs.length === 0 ? (
+            <div className="py-8 text-center">
+              <Cpu className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
+              <p className="mb-4 text-muted-foreground">No simulations yet</p>
+              <Link to="/circuits">
+                <Button>Build and run a circuit</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {runs.map((run: SimulationRunSummary) => (
+                <div
+                  key={run.id}
+                  className={`flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-accent/50 ${
+                    run.id === selectedId ? 'border-primary/50 bg-primary/5' : 'border-border'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    {run.status === 'completed' ? (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-500" />
                     )}
+                    <div>
+                      <p className="font-medium">{run.circuitName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {run.engine} • {run.numQubits} qubits • {run.shots.toLocaleString()} shots
+                      </p>
+                    </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    View
-                  </Button>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right text-sm text-muted-foreground">
+                      <p className="flex items-center justify-end gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {run.executionTimeMs.toFixed(2)} ms
+                      </p>
+                      <p>{new Date(run.createdAt).toLocaleString()}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedId(run.id === selectedId ? null : run.id)}
+                    >
+                      {run.id === selectedId ? 'Hide' : 'View'}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Selected run results */}
+      {selectedId && selected && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold">
+            Results — {selected.circuitName}
+          </h2>
+          <SimulationResults result={toResultProps(selected)} />
+        </div>
+      )}
     </div>
   );
 }

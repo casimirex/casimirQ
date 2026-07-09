@@ -29,6 +29,7 @@ import {
   SimulationRunnerService,
 } from '../services/simulation-runner.service';
 import { CircuitsRepository, StoredCircuit } from '../repositories/circuits.repository';
+import { SimulationsRepository } from '../repositories/simulations.repository';
 
 @Controller('api/v1/circuits')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
@@ -36,6 +37,7 @@ export class CircuitsController {
   constructor(
     private readonly simulationRunner: SimulationRunnerService,
     private readonly circuits: CircuitsRepository,
+    private readonly simulations: SimulationsRepository,
   ) {}
 
   /**
@@ -171,19 +173,25 @@ export class CircuitsController {
       method?: EngineType;
       shots?: number;
       seed?: number;
+      circuitName?: string;
     },
     @Request() req: any,
   ) {
+    const userId = this.userId(req);
     let spec: { numQubits: number; operations?: CircuitOperationSpec[] };
+    let circuitName = body.circuitName?.trim() || 'Ad-hoc circuit';
+    let circuitId: string | null = null;
 
     if (body.numQubits !== undefined) {
       spec = { numQubits: body.numQubits, operations: body.operations };
     } else {
-      const stored = await this.circuits.findById(this.userId(req), id);
+      const stored = await this.circuits.findById(userId, id);
       if (!stored) {
         throw new NotFoundException(`Circuit ${id} not found`);
       }
       spec = { numQubits: stored.numQubits, operations: stored.operations };
+      circuitName = stored.name;
+      circuitId = stored.id;
     }
 
     const run = this.simulationRunner.run(spec, {
@@ -193,9 +201,21 @@ export class CircuitsController {
       seed: body.seed,
     });
 
+    // Record the run so it appears in simulation history.
+    const record = await this.simulations.create(userId, {
+      circuitId,
+      circuitName,
+      engine: run.requestedEngine,
+      shots: run.shots,
+      numQubits: run.numQubits,
+      status: run.status,
+      results: run.results,
+      executionTimeMs: run.metadata.executionTimeMs,
+    });
+
     return {
       circuitId: id,
-      jobId: 'sim-' + Date.now(),
+      jobId: record.id,
       ...run,
     };
   }
