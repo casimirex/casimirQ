@@ -1,61 +1,59 @@
 /**
- * Login Page
- * Authentication page for users
+ * Signup Page
+ * Account registration.
  */
 
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useLogin } from '@/api/hooks/useAuth';
+import { useSignup } from '@/api/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import { useIsAuthenticated } from '@/stores/authStore';
 
-export function Login() {
+export function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
   const navigate = useNavigate();
   const isAuthenticated = useIsAuthenticated();
-  const login = useLogin();
+  const signup = useSignup();
 
-  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
-  // Handle login success
   useEffect(() => {
-    if (login.isSuccess) {
-      toast.success('Welcome back!');
+    if (signup.isSuccess) {
+      toast.success('Welcome to casimirQ!');
       navigate('/', { replace: true });
     }
-  }, [login.isSuccess, navigate]);
-
-  // Handle login errors
-  useEffect(() => {
-    if (login.isError) {
-      toast.error('Invalid credentials. Please try again.');
-    }
-  }, [login.isError]);
+  }, [signup.isSuccess, navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error('Please enter both email and password');
+      toast.error('Please enter an email and password');
       return;
     }
-    login.mutate({ email, password });
+    if (password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (password !== confirm) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    signup.mutate({ email, password });
   };
 
   return (
     <div>
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold">Welcome back</h1>
-        <p className="text-muted-foreground mt-1">
-          Sign in to your account to continue
-        </p>
+        <h1 className="text-2xl font-bold">Create your account</h1>
+        <p className="text-muted-foreground mt-1">Start building quantum circuits</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -72,16 +70,26 @@ export function Login() {
         <Input
           label="Password"
           type="password"
-          placeholder="••••••••"
+          placeholder="At least 6 characters"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          autoComplete="current-password"
+          autoComplete="new-password"
         />
 
-        {login.isError && (
+        <Input
+          label="Confirm password"
+          type="password"
+          placeholder="••••••••"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          required
+          autoComplete="new-password"
+        />
+
+        {signup.isError && (
           <div className="text-sm text-destructive text-center">
-            Invalid credentials. Please try again.
+            {signup.error instanceof Error ? signup.error.message : 'Signup failed'}
           </div>
         )}
 
@@ -89,23 +97,18 @@ export function Login() {
           type="submit"
           className="w-full"
           size="lg"
-          isLoading={login.isPending}
-          disabled={login.isPending}
+          isLoading={signup.isPending}
+          disabled={signup.isPending}
         >
-          {login.isPending ? 'Signing in...' : 'Sign In'}
+          {signup.isPending ? 'Creating account...' : 'Sign Up'}
         </Button>
       </form>
 
       <div className="mt-6 text-center text-sm text-muted-foreground">
-        Don't have an account?{' '}
-        <Link to="/signup" className="text-primary hover:underline">
-          Sign up
+        Already have an account?{' '}
+        <Link to="/login" className="text-primary hover:underline">
+          Sign in
         </Link>
-      </div>
-
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        <p>Demo credentials:</p>
-        <p className="font-mono text-xs mt-1">admin@example.com / admin123</p>
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ import { CircuitBuilder } from '@/pages/CircuitBuilder';
 import { Simulations } from '@/pages/Simulations';
 import { Algorithms } from '@/pages/Algorithms';
 import { Login } from '@/pages/Login';
+import { Signup } from '@/pages/Signup';
 import { NotFound } from '@/pages/NotFound';
 
 // Hooks
@@ -61,6 +62,7 @@ function App() {
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
           </Route>
 
           {/* Protected Routes */}

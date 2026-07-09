@@ -30,6 +30,23 @@ export function useLogin() {
 }
 
 /**
+ * Signup mutation — registers a new account and logs in on success.
+ */
+export function useSignup() {
+  const setAuth = useAuthStore((state) => state.setAuth);
+
+  return useMutation({
+    mutationFn: async (credentials: LoginCredentials) => {
+      const response = await api.post<AuthResponse>('/auth/signup', credentials);
+      return response;
+    },
+    onSuccess: (data) => {
+      setAuth(data.access_token, data.user);
+    },
+  });
+}
+
+/**
  * Logout mutation
  */
 export function useLogout() {

@@ -5,18 +5,22 @@
  */
 
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, ConflictException, BadRequestException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
+import { InMemoryUsersRepository } from '../../repositories/in-memory-users.repository';
 
 const SECRET = 'test-secret';
 
 describe('AuthService', () => {
   let service: AuthService;
   let jwt: JwtService;
+  let users: InMemoryUsersRepository;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jwt = new JwtService({ secret: SECRET, signOptions: { expiresIn: '1h' } });
-    service = new AuthService(jwt);
+    users = new InMemoryUsersRepository();
+    service = new AuthService(jwt, users);
+    await service.onApplicationBootstrap(); // seed demo/admin users
   });
 
   describe('generateToken', () => {
@@ -102,6 +106,61 @@ describe('AuthService', () => {
         password: 'wrong',
       });
       expect(token).toBeNull();
+    });
+
+    it('normalizes email case/whitespace on login', async () => {
+      const token = await service.authenticateUser({
+        email: '  DEMO@Example.com ',
+        password: 'demo',
+      });
+      expect(token).not.toBeNull();
+    });
+  });
+
+  describe('registerUser', () => {
+    it('creates a new user and returns a token that authenticates', async () => {
+      const { token, user } = await service.registerUser({
+        email: 'new@example.com',
+        password: 'secret123',
+      });
+      expect(token).toHaveProperty('access_token');
+      expect(user.email).toBe('new@example.com');
+
+      // The new user can now log in.
+      const login = await service.authenticateUser({
+        email: 'new@example.com',
+        password: 'secret123',
+      });
+      expect(login).not.toBeNull();
+
+      // The token identifies the created user.
+      const payload = await service.validateToken(token.access_token);
+      expect(payload.sub).toBe(user.id);
+    });
+
+    it('rejects a duplicate email', async () => {
+      await expect(
+        service.registerUser({ email: 'demo@example.com', password: 'secret123' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('rejects an invalid email', async () => {
+      await expect(
+        service.registerUser({ email: 'not-an-email', password: 'secret123' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects a too-short password', async () => {
+      await expect(
+        service.registerUser({ email: 'x@example.com', password: '123' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('does not store the password in plaintext', async () => {
+      await service.registerUser({ email: 'hash@example.com', password: 'secret123' });
+      const stored = await users.findByEmail('hash@example.com');
+      expect(stored?.passwordHash).toBeDefined();
+      expect(stored?.passwordHash).not.toBe('secret123');
     });
   });
 
