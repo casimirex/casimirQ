@@ -23,6 +23,9 @@ import { SimulationRunnerService } from './services/simulation-runner.service';
 import { CircuitsRepository } from './repositories/circuits.repository';
 import { InMemoryCircuitsRepository } from './repositories/in-memory-circuits.repository';
 import { PostgresCircuitsRepository } from './repositories/postgres-circuits.repository';
+import { SimulationsRepository } from './repositories/simulations.repository';
+import { InMemorySimulationsRepository } from './repositories/in-memory-simulations.repository';
+import { PostgresSimulationsRepository } from './repositories/postgres-simulations.repository';
 
 // Guards
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -62,6 +65,12 @@ import { JobsGateway } from './gateways/jobs.gateway';
     {
       provide: CircuitsRepository,
       useClass: process.env.DATABASE_URL ? PostgresCircuitsRepository : InMemoryCircuitsRepository,
+    },
+    {
+      provide: SimulationsRepository,
+      useClass: process.env.DATABASE_URL
+        ? PostgresSimulationsRepository
+        : InMemorySimulationsRepository,
     },
     JwtAuthGuard,
     RateLimitGuard,

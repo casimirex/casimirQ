@@ -121,12 +121,13 @@ export function useDeleteCircuit() {
 
 /**
  * Input for running a simulation. The circuit definition is sent inline
- * (numQubits + operations) since circuits are not yet persisted server-side.
+ * (numQubits + operations) since a circuit need not be saved to be simulated.
  */
 export interface SimulateCircuitInput {
   circuitId: string;
   numQubits: number;
   operations: SimulationOperation[];
+  circuitName?: string;
   engine?: SimulationEngine;
   shots?: number;
   seed?: number;
@@ -135,18 +136,34 @@ export interface SimulateCircuitInput {
 /**
  * Simulate a circuit. Returns real results synchronously (the backend runs
  * the circuit on the statevector engine and returns statevector,
- * probabilities and sampled measurement counts).
+ * probabilities and sampled measurement counts) and records the run in
+ * simulation history.
  */
 export function useSimulateCircuit() {
+  const queryClient = useQueryClient();
+
   return useMutation<SimulationResult, Error, SimulateCircuitInput>({
-    mutationFn: async ({ circuitId, numQubits, operations, engine, shots, seed }) => {
+    mutationFn: async ({
+      circuitId,
+      numQubits,
+      operations,
+      circuitName,
+      engine,
+      shots,
+      seed,
+    }) => {
       return api.post<SimulationResult>(`/circuits/${circuitId}/simulate`, {
         numQubits,
         operations,
+        circuitName,
         engine,
         shots,
         seed,
       });
+    },
+    onSuccess: () => {
+      // A new run was recorded — refresh simulation history.
+      queryClient.invalidateQueries({ queryKey: ['simulations'] });
     },
   });
 }

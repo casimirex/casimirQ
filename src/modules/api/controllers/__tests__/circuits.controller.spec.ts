@@ -12,6 +12,7 @@ import { StatevectorEngine } from '../../../simulation-engines/engines/statevect
 import { MPSEngine } from '../../../simulation-engines/engines/mps-engine/mps-engine';
 import { CliffordEngine } from '../../../simulation-engines/engines/clifford-engine/clifford-engine';
 import { InMemoryCircuitsRepository } from '../../repositories/in-memory-circuits.repository';
+import { InMemorySimulationsRepository } from '../../repositories/in-memory-simulations.repository';
 
 describe('CircuitsController', () => {
   let controller: CircuitsController;
@@ -32,6 +33,7 @@ describe('CircuitsController', () => {
     controller = new CircuitsController(
       new SimulationRunnerService(engines),
       new InMemoryCircuitsRepository(),
+      new InMemorySimulationsRepository(),
     );
   });
 
