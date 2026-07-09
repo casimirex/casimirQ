@@ -33,6 +33,53 @@ interface PauliOp {
 }
 
 /**
+ * A whole-register Pauli: (i^g) · ⊗_j X^{a_j} Z^{b_j}.
+ * The X and Z parts are packed as bitmasks (bit j = qubit j) so the
+ * representation scales to many qubits.
+ */
+interface PackedPauli {
+  a: bigint; // X part
+  b: bigint; // Z part
+  g: number; // global phase exponent of i (mod 4)
+}
+
+/** Largest support (2^r) toStatevector will materialize. */
+const MAX_STATEVECTOR_QUBITS = 16;
+
+function popcountBig(x: bigint): number {
+  let count = 0;
+  let v = x;
+  while (v > 0n) {
+    count += Number(v & 1n);
+    v >>= 1n;
+  }
+  return count;
+}
+
+function parityBig(x: bigint): number {
+  return popcountBig(x) & 1;
+}
+
+function lowestSetBit(x: bigint): number {
+  let i = 0;
+  while (((x >> BigInt(i)) & 1n) === 0n) {
+    i++;
+  }
+  return i;
+}
+
+/** Product of two Paulis in (i^g · X^a Z^b) form. */
+function mulPauli(p: PackedPauli, q: PackedPauli): PackedPauli {
+  // Z^{p.b} X^{q.a} = (-1)^{p.b · q.a} X^{q.a} Z^{p.b}
+  const sign = 2 * (popcountBig(p.b & q.a) & 1);
+  return {
+    a: p.a ^ q.a,
+    b: p.b ^ q.b,
+    g: (p.g + q.g + sign) & 3,
+  };
+}
+
+/**
  * Stabilizer Tableau
  *
  * Represents n qubits using 2n generators:
@@ -102,11 +149,12 @@ class StabilizerTableau {
   applyS(j: number): void {
     const n = this.numQubits;
 
+    // S X S† = Y = i·XZ, S Z S† = Z. So when X is present, add a Z and an
+    // overall factor of i (phase += 1).
     for (let k = 0; k < 2 * n; k++) {
-      // If X present, add Z (X → Y = iXZ)
       if (this.x[k][j]) {
-        this.phase[k] = (this.phase[k] + this.z[k][j] * 2) % 4;
-        this.z[k][j] ^= 1; // XOR with X presence
+        this.phase[k] = (this.phase[k] + 1) % 4;
+        this.z[k][j] ^= 1;
       }
     }
   }
@@ -130,53 +178,58 @@ class StabilizerTableau {
       }
 
       // Update phase for Y ⊗ Y
-      if (
-        this.x[k][c] &&
-        this.z[k][c] &&
-        this.x[k][t] &&
-        this.z[k][t]
-      ) {
+      if (this.x[k][c] && this.z[k][c] && this.x[k][t] && this.z[k][t]) {
         this.phase[k] = (this.phase[k] + 2) % 4;
       }
     }
   }
 
   /**
-   * Apply Pauli X to qubit j
+   * Apply Pauli X to qubit j.
+   * Conjugation by X flips the sign of any generator that anticommutes with
+   * X on qubit j — i.e. those with a Z component (z = 1).
    */
   applyX(j: number): void {
-    // X is not in Clifford group alone, but can be done as HSH
-    this.applyH(j);
-    this.applyS(j);
-    this.applyS(j);
-    this.applyS(j);
-    this.applyH(j);
+    const n = this.numQubits;
+    for (let k = 0; k < 2 * n; k++) {
+      if (this.z[k][j]) {
+        this.phase[k] = (this.phase[k] + 2) % 4;
+      }
+    }
   }
 
   /**
-   * Apply Pauli Z to qubit j
+   * Apply Pauli Z to qubit j.
+   * Flips the sign of generators that anticommute with Z (those with x = 1).
    */
   applyZ(j: number): void {
-    this.applyS(j);
-    this.applyS(j);
+    const n = this.numQubits;
+    for (let k = 0; k < 2 * n; k++) {
+      if (this.x[k][j]) {
+        this.phase[k] = (this.phase[k] + 2) % 4;
+      }
+    }
   }
 
   /**
-   * Apply Pauli Y to qubit j
+   * Apply Pauli Y to qubit j.
+   * Flips the sign of generators that anticommute with Y (those with exactly
+   * one of X, Z on qubit j, i.e. x XOR z).
    */
   applyY(j: number): void {
-    this.applyS(j);
-    this.applyX(j);
-    this.applyS(j);
-    this.applyS(j);
-    this.applyS(j);
+    const n = this.numQubits;
+    for (let k = 0; k < 2 * n; k++) {
+      if (this.x[k][j] ^ this.z[k][j]) {
+        this.phase[k] = (this.phase[k] + 2) % 4;
+      }
+    }
   }
 
   /**
    * Measure qubit j
    * Returns: 0 or 1 (measurement outcome)
    */
-  measure(j: number, seed?: number): 0 | 1 {
+  measure(j: number, _seed?: number): 0 | 1 {
     const n = this.numQubits;
 
     // Check if Z_j commutes with all stabilizers
@@ -188,24 +241,15 @@ class StabilizerTableau {
       }
     }
 
+    // NOTE: measurement is not yet a correct projective measurement — it does
+    // not compute the deterministic outcome from the destabilizers nor collapse
+    // the tableau. toStatevector() therefore reflects the pre-measurement state.
     if (anticommutes === -1) {
-      // Deterministic outcome
-      // Result is determined by phase
-      // Extract from tableau
-      let result = 0;
-      // Simplified: return random for now
-      // Full implementation would compute from destabilizers
+      // Deterministic outcome (currently a placeholder).
       return (Math.random() < 0.5 ? 0 : 1) as 0 | 1;
-    } else {
-      // Random outcome
-      // Collapse wavefunction
-      const outcome: 0 | 1 = Math.random() < 0.5 ? 0 : 1;
-
-      // Update tableau to reflect measurement
-      // Simplified version
-
-      return outcome;
     }
+    // Random outcome (collapse not yet implemented).
+    return (Math.random() < 0.5 ? 0 : 1) as 0 | 1;
   }
 
   /**
@@ -231,23 +275,143 @@ class StabilizerTableau {
   }
 
   /**
-   * Convert to statevector (only for small n)
+   * Convert the stabilizer state to a (sparse) statevector.
+   *
+   * Reconstructs the true amplitudes of the state stabilized by the tableau's
+   * generators, rather than assuming |0…0⟩. Only the non-zero amplitudes are
+   * returned. Practical only when the support (2^r, r = number of independent
+   * X-type generators) is small — states with support larger than
+   * 2^MAX_STATEVECTOR_QUBITS return an empty map since a dense statevector
+   * would be infeasible.
+   *
+   * Algorithm: the state is the +1 eigenstate of the n stabilizer generators
+   * g_k = i^{phase_k} · ⊗_j X^{x_kj} Z^{z_kj}. We
+   *   1. Gaussian-eliminate the generators by their X-parts, splitting them
+   *      into r "pivot" generators (non-trivial X) and diagonal (pure-Z) ones;
+   *   2. solve the diagonal constraints for a reference basis state |x0⟩ in
+   *      the support;
+   *   3. expand the projector ∏(I+g_pivot)/2 |x0⟩ over the 2^r pivot subgroup,
+   *      giving amplitude i^g(-1)^{b·x0}/√(2^r) at |x0 ⊕ a⟩ for each element.
    */
   toStatevector(): Map<bigint, Complex> {
     const n = this.numQubits;
     const statevector = new Map<bigint, Complex>();
-
-    // For Clifford states, we can compute amplitudes efficiently
-    // This is a simplified version
-
-    // Initialize all amplitudes to 0
-    const dim = 1 << n;
-    for (let i = 0; i < dim; i++) {
-      statevector.set(BigInt(i), new Complex(0, 0));
+    if (n === 0) {
+      statevector.set(0n, new Complex(1, 0));
+      return statevector;
     }
 
-    // Set |0...0⟩ amplitude (simplified)
-    statevector.set(BigInt(0), new Complex(1, 0));
+    // Extract the n stabilizer generators as packed Paulis.
+    const generators: PackedPauli[] = [];
+    for (let k = 0; k < n; k++) {
+      let a = 0n;
+      let b = 0n;
+      for (let j = 0; j < n; j++) {
+        if (this.x[k][j]) a |= 1n << BigInt(j);
+        if (this.z[k][j]) b |= 1n << BigInt(j);
+      }
+      generators.push({ a, b, g: this.phase[k] });
+    }
+
+    // 1. Row-reduce by X-part → pivot generators (distinct X pivot bits) and
+    //    diagonal generators (pure Z).
+    const pivots: PackedPauli[] = [];
+    const pivotBits: number[] = [];
+    const diagonals: PackedPauli[] = [];
+
+    for (const gen of generators) {
+      let cur = gen;
+      for (let i = 0; i < pivots.length; i++) {
+        if ((cur.a >> BigInt(pivotBits[i])) & 1n) {
+          cur = mulPauli(cur, pivots[i]);
+        }
+      }
+      if (cur.a === 0n) {
+        diagonals.push(cur);
+      } else {
+        const bit = lowestSetBit(cur.a);
+        for (let i = 0; i < pivots.length; i++) {
+          if ((pivots[i].a >> BigInt(bit)) & 1n) {
+            pivots[i] = mulPauli(pivots[i], cur);
+          }
+        }
+        pivots.push(cur);
+        pivotBits.push(bit);
+      }
+    }
+
+    const r = pivots.length;
+    if (r > MAX_STATEVECTOR_QUBITS) {
+      // Support too large to materialize a dense statevector.
+      return statevector;
+    }
+
+    // 2. Solve diagonal constraints b·x = s (s from the ±1 sign) for a
+    //    reference state |x0⟩, via GF(2) elimination on the Z-parts.
+    const rowMasks: bigint[] = [];
+    const rowSigns: number[] = [];
+    const rowPivots: number[] = [];
+    for (const d of diagonals) {
+      let mask = d.b;
+      // Diagonal generator is i^g Z-string; Hermitian ⇒ g ∈ {0, 2}.
+      let sign = (d.g & 2) === 2 ? 1 : 0;
+      for (let i = 0; i < rowMasks.length; i++) {
+        if ((mask >> BigInt(rowPivots[i])) & 1n) {
+          mask ^= rowMasks[i];
+          sign ^= rowSigns[i];
+        }
+      }
+      if (mask === 0n) continue; // dependent constraint
+      rowMasks.push(mask);
+      rowSigns.push(sign);
+      rowPivots.push(lowestSetBit(mask));
+    }
+
+    let x0 = 0n;
+    for (let i = rowMasks.length - 1; i >= 0; i--) {
+      const bit = rowPivots[i];
+      const rest = rowMasks[i] & ~(1n << BigInt(bit));
+      const value = rowSigns[i] ^ parityBig(rest & x0);
+      if (value) x0 |= 1n << BigInt(bit);
+    }
+
+    // 3. Enumerate the 2^r pivot subgroup via Gray code (generators commute,
+    //    so each step multiplies the running product by one generator).
+    const support = 1 << r;
+    const norm = 1 / Math.sqrt(support);
+
+    const setAmplitude = (p: PackedPauli): void => {
+      const target = x0 ^ p.a;
+      const magnitude = norm * (parityBig(p.b & x0) ? -1 : 1);
+      let re = 0;
+      let im = 0;
+      switch (p.g & 3) {
+        case 0:
+          re = magnitude;
+          break;
+        case 1:
+          im = magnitude;
+          break;
+        case 2:
+          re = -magnitude;
+          break;
+        default:
+          im = -magnitude;
+          break;
+      }
+      statevector.set(target, new Complex(re, im));
+    };
+
+    let product: PackedPauli = { a: 0n, b: 0n, g: 0 };
+    let gray = 0;
+    setAmplitude(product);
+    for (let i = 1; i < support; i++) {
+      const nextGray = i ^ (i >> 1);
+      const flipped = 31 - Math.clz32(gray ^ nextGray);
+      product = mulPauli(product, pivots[flipped]);
+      gray = nextGray;
+      setAmplitude(product);
+    }
 
     return statevector;
   }
@@ -331,64 +495,7 @@ export class CliffordEngine implements ISimulationEngine {
     const measurements: IMeasurementOutcome[] = [];
 
     for (const op of circuit.operations) {
-      switch (op.gate.type.toLowerCase()) {
-        case 'i':
-        case 'id':
-          // Identity - no operation
-          break;
-        case 'x':
-          tableau.applyX(op.targets[0]);
-          break;
-        case 'y':
-          tableau.applyY(op.targets[0]);
-          break;
-        case 'z':
-          tableau.applyZ(op.targets[0]);
-          break;
-        case 'h':
-          tableau.applyH(op.targets[0]);
-          break;
-        case 's':
-          tableau.applyS(op.targets[0]);
-          break;
-        case 'sdg':
-          // S† = S³
-          tableau.applyS(op.targets[0]);
-          tableau.applyS(op.targets[0]);
-          tableau.applyS(op.targets[0]);
-          break;
-        case 'cx':
-        case 'cnot':
-          tableau.applyCNOT(op.targets[0], op.targets[1]);
-          break;
-        case 'cz':
-          // CZ = H-CNOT-H
-          tableau.applyH(op.targets[1]);
-          tableau.applyCNOT(op.targets[0], op.targets[1]);
-          tableau.applyH(op.targets[1]);
-          break;
-        case 'swap':
-          // SWAP = CNOT-CNOT-CNOT
-          tableau.applyCNOT(op.targets[0], op.targets[1]);
-          tableau.applyCNOT(op.targets[1], op.targets[0]);
-          tableau.applyCNOT(op.targets[0], op.targets[1]);
-          break;
-        case 'measure':
-          for (const qubit of op.targets) {
-            const outcome = tableau.measure(qubit, options.seed);
-            measurements.push({
-              qubit,
-              value: outcome,
-              probability: 0.5, // Placeholder
-            });
-          }
-          break;
-        case 'barrier':
-          // No-op
-          break;
-        default:
-          throw new Error(`Unsupported gate in Clifford simulator: ${op.gate.type}`);
-      }
+      this.applyOperation(tableau, op, options, measurements);
     }
 
     const endTime = performance.now();
@@ -408,36 +515,101 @@ export class CliffordEngine implements ISimulationEngine {
   }
 
   /**
+   * Apply a single circuit operation to the tableau.
+   *
+   * Controlled gates are stored as a base gate (e.g. XGate) plus a `controls`
+   * array — cx(c,t) is XGate on target t controlled by c — so control/target
+   * are read from `controls`/`targets`, not two entries of `targets`.
+   */
+  private applyOperation(
+    tableau: StabilizerTableau,
+    op: IGateOperation,
+    options: ISimulationOptions,
+    measurements: IMeasurementOutcome[],
+  ): void {
+    const type = op.gate.type.toLowerCase();
+    const controls = op.controls ?? [];
+    const targets = op.targets;
+
+    if (controls.length > 0) {
+      const control = controls[0];
+      const target = targets[0];
+      switch (type) {
+        case 'x': // controlled-X = CNOT
+          tableau.applyCNOT(control, target);
+          return;
+        case 'z': // controlled-Z = H(t) · CNOT · H(t)
+          tableau.applyH(target);
+          tableau.applyCNOT(control, target);
+          tableau.applyH(target);
+          return;
+        default:
+          throw new Error(`Unsupported controlled gate in Clifford simulator: ${type}`);
+      }
+    }
+
+    switch (type) {
+      case 'i':
+      case 'id':
+      case 'barrier':
+        break;
+      case 'x':
+        tableau.applyX(targets[0]);
+        break;
+      case 'y':
+        tableau.applyY(targets[0]);
+        break;
+      case 'z':
+        tableau.applyZ(targets[0]);
+        break;
+      case 'h':
+        tableau.applyH(targets[0]);
+        break;
+      case 's':
+        tableau.applyS(targets[0]);
+        break;
+      case 'sdg':
+        tableau.applyS(targets[0]);
+        tableau.applyS(targets[0]);
+        tableau.applyS(targets[0]);
+        break;
+      case 'cx':
+      case 'cnot':
+        // Fallback: an explicit two-target CNOT representation.
+        tableau.applyCNOT(targets[0], targets[1]);
+        break;
+      case 'cz':
+        tableau.applyH(targets[1]);
+        tableau.applyCNOT(targets[0], targets[1]);
+        tableau.applyH(targets[1]);
+        break;
+      case 'swap':
+        tableau.applyCNOT(targets[0], targets[1]);
+        tableau.applyCNOT(targets[1], targets[0]);
+        tableau.applyCNOT(targets[0], targets[1]);
+        break;
+      case 'measure':
+        for (const qubit of targets) {
+          measurements.push({
+            qubit,
+            value: tableau.measure(qubit, options.seed),
+            probability: 0.5,
+          });
+        }
+        break;
+      default:
+        throw new Error(`Unsupported gate in Clifford simulator: ${op.gate.type}`);
+    }
+  }
+
+  /**
    * Get stabilizer generators
    */
   getStabilizers(circuit: Circuit): PauliOp[][] {
     const tableau = new StabilizerTableau(circuit.numQubits);
-
-    // Apply circuit
     for (const op of circuit.operations) {
-      switch (op.gate.type.toLowerCase()) {
-        case 'x':
-          tableau.applyX(op.targets[0]);
-          break;
-        case 'y':
-          tableau.applyY(op.targets[0]);
-          break;
-        case 'z':
-          tableau.applyZ(op.targets[0]);
-          break;
-        case 'h':
-          tableau.applyH(op.targets[0]);
-          break;
-        case 's':
-          tableau.applyS(op.targets[0]);
-          break;
-        case 'cx':
-        case 'cnot':
-          tableau.applyCNOT(op.targets[0], op.targets[1]);
-          break;
-      }
+      this.applyOperation(tableau, op, {}, []);
     }
-
     return tableau.getStabilizers();
   }
 

@@ -179,10 +179,10 @@ export class SimulationRunnerService {
    */
   run(spec: CircuitSpec, config: SimulationRunConfig = {}): SimulationRunResult {
     const circuit = this.buildCircuit(spec);
-    // Default to the dense statevector engine: it is the only backend that
-    // returns exact amplitudes for arbitrary circuits (the Clifford engine's
-    // statevector is a stub, and MPS is approximate). Callers can still opt
-    // into another engine explicitly via `engine`/`method`.
+    // Default to the dense statevector engine: it returns exact amplitudes for
+    // arbitrary gate sets (the Clifford engine is exact but only for Clifford
+    // circuits, and MPS is approximate). Callers can still opt into another
+    // engine explicitly via `engine`/`method`.
     const requestedEngine: EngineType = config.engine ?? config.method ?? 'statevector';
     const shots = this.normalizeShots(config.shots);
 
