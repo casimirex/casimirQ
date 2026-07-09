@@ -1,0 +1,155 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 8%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 222 47% 6%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 199 89% 48%;
+    --radius: 0.5rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-background/80 backdrop-blur-xl border border-white/10;
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);
+  }
+
+  .quantum-gradient {
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(280, 89%, 48%) 100%
+    );
+  }
+
+  .circuit-grid {
+    background-image:
+      linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  .slide-in {
+    animation: slide-in 0.3s ease-out;
+  }
+}
+
+/* React Flow customization */
+.react-flow {
+  --xy-edge-stroke: hsl(var(--border));
+  --xy-edge-stroke-width: 2;
+  --xy-node-border-radius: 8px;
+  --xy-handle-background: hsl(var(--primary));
+  --xy-handle-border-color: hsl(var(--primary));
+}
+
+.react-flow__node {
+  @apply transition-all duration-200;
+}
+
+.react-flow__node.selected {
+  @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+.react-flow__edge path {
+  @apply stroke-muted-foreground stroke-2;
+}
+
+.react-flow__edge.selected path {
+  @apply stroke-primary;
+}
+
+/* Gate node styles */
+.gate-node {
+  @apply flex items-center justify-center rounded-lg font-mono font-bold text-sm shadow-lg transition-all duration-200;
+}
+
+.gate-node:hover {
+  @apply scale-110 shadow-glow;
+}
+
+.gate-h { @apply bg-gate-h/20 text-gate-h border border-gate-h/50; }
+.gate-x { @apply bg-gate-x/20 text-gate-x border border-gate-x/50; }
+.gate-y { @apply bg-gate-y/20 text-gate-y border border-gate-y/50; }
+.gate-z { @apply bg-gate-z/20 text-gate-z border border-gate-z/50; }
+.gate-cnot { @apply bg-gate-cnot/20 text-gate-cnot border border-gate-cnot/50; }
+.gate-measure { @apply bg-gate-measure/20 text-gate-measure border border-gate-measure/50; }
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+/* Toast notifications */
+[data-sonner-toast] {
+  @apply bg-card border-border text-foreground;
+}
