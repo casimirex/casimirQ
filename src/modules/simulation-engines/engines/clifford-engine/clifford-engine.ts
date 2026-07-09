@@ -68,6 +68,20 @@ function lowestSetBit(x: bigint): number {
   return i;
 }
 
+/** Seeded mulberry32 PRNG (deterministic when a seed is given). */
+function makeRng(seed?: number): () => number {
+  if (seed === undefined) {
+    return Math.random;
+  }
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 /** Product of two Paulis in (i^g · X^a Z^b) form. */
 function mulPauli(p: PackedPauli, q: PackedPauli): PackedPauli {
   // Z^{p.b} X^{q.a} = (-1)^{p.b · q.a} X^{q.a} Z^{p.b}
@@ -225,31 +239,88 @@ class StabilizerTableau {
     }
   }
 
+  /** Read row k as a packed Pauli (i^g · X^a Z^b). */
+  private rowPauli(k: number): PackedPauli {
+    let a = 0n;
+    let b = 0n;
+    for (let j = 0; j < this.numQubits; j++) {
+      if (this.x[k][j]) a |= 1n << BigInt(j);
+      if (this.z[k][j]) b |= 1n << BigInt(j);
+    }
+    return { a, b, g: this.phase[k] };
+  }
+
+  /** Write a packed Pauli back into row k. */
+  private writeRow(k: number, p: PackedPauli): void {
+    for (let j = 0; j < this.numQubits; j++) {
+      this.x[k][j] = (p.a >> BigInt(j)) & 1n ? 1 : 0;
+      this.z[k][j] = (p.b >> BigInt(j)) & 1n ? 1 : 0;
+    }
+    this.phase[k] = p.g & 3;
+  }
+
+  /** Left-multiply row h by row i (row_h ← row_i · row_h). */
+  private rowsum(h: number, i: number): void {
+    this.writeRow(h, mulPauli(this.rowPauli(i), this.rowPauli(h)));
+  }
+
   /**
-   * Measure qubit j
-   * Returns: 0 or 1 (measurement outcome)
+   * Projectively measure qubit `a` in the computational basis (observable Z_a).
+   *
+   * Follows the Aaronson–Gottesman algorithm: if a stabilizer generator
+   * anticommutes with Z_a the outcome is random and the tableau collapses; if
+   * Z_a commutes with every stabilizer the outcome is determined by the product
+   * of the stabilizers that equals ±Z_a. `random` supplies the coin flip.
+   *
+   * Rows [0, n) are stabilizers, [n, 2n) the paired destabilizers.
    */
-  measure(j: number, _seed?: number): 0 | 1 {
+  measure(a: number, random: () => number): { value: 0 | 1; probability: number } {
     const n = this.numQubits;
 
-    // Check if Z_j commutes with all stabilizers
-    let anticommutes = -1;
-    for (let p = 0; p < n; p++) {
-      if (this.x[p][j]) {
-        anticommutes = p;
+    // A generator anticommutes with Z_a iff it has an X component on qubit a.
+    let p = -1;
+    for (let k = 0; k < n; k++) {
+      if (this.x[k][a]) {
+        p = k;
         break;
       }
     }
 
-    // NOTE: measurement is not yet a correct projective measurement — it does
-    // not compute the deterministic outcome from the destabilizers nor collapse
-    // the tableau. toStatevector() therefore reflects the pre-measurement state.
-    if (anticommutes === -1) {
-      // Deterministic outcome (currently a placeholder).
-      return (Math.random() < 0.5 ? 0 : 1) as 0 | 1;
+    if (p !== -1) {
+      // --- Random outcome: collapse onto the ±Z_a eigenspace. ---
+      const outcome: 0 | 1 = random() < 0.5 ? 0 : 1;
+
+      // Make every other generator commute with Z_a by multiplying in row p.
+      for (let k = 0; k < 2 * n; k++) {
+        if (k !== p && this.x[k][a]) {
+          this.rowsum(k, p);
+        }
+      }
+
+      // The old stabilizer p becomes the new destabilizer; the new stabilizer
+      // is (-1)^outcome · Z_a.
+      this.writeRow(p + n, this.rowPauli(p));
+      for (let j = 0; j < n; j++) {
+        this.x[p][j] = 0;
+        this.z[p][j] = 0;
+      }
+      this.z[p][a] = 1;
+      this.phase[p] = outcome ? 2 : 0;
+
+      return { value: outcome, probability: 0.5 };
     }
-    // Random outcome (collapse not yet implemented).
-    return (Math.random() < 0.5 ? 0 : 1) as 0 | 1;
+
+    // --- Deterministic outcome: no state change. ---
+    // Z_a equals ± the product of the stabilizers whose destabilizer
+    // anticommutes with Z_a; that product's sign is the outcome.
+    let acc: PackedPauli = { a: 0n, b: 0n, g: 0 };
+    for (let d = n; d < 2 * n; d++) {
+      if (this.x[d][a]) {
+        acc = mulPauli(acc, this.rowPauli(d - n));
+      }
+    }
+    const value: 0 | 1 = (acc.g & 3) === 2 ? 1 : 0;
+    return { value, probability: 1 };
   }
 
   /**
@@ -493,9 +564,10 @@ export class CliffordEngine implements ISimulationEngine {
     const numQubits = circuit.numQubits;
     const tableau = new StabilizerTableau(numQubits);
     const measurements: IMeasurementOutcome[] = [];
+    const random = makeRng(options.seed);
 
     for (const op of circuit.operations) {
-      this.applyOperation(tableau, op, options, measurements);
+      this.applyOperation(tableau, op, random, measurements);
     }
 
     const endTime = performance.now();
@@ -524,7 +596,7 @@ export class CliffordEngine implements ISimulationEngine {
   private applyOperation(
     tableau: StabilizerTableau,
     op: IGateOperation,
-    options: ISimulationOptions,
+    random: () => number,
     measurements: IMeasurementOutcome[],
   ): void {
     const type = op.gate.type.toLowerCase();
@@ -590,10 +662,11 @@ export class CliffordEngine implements ISimulationEngine {
         break;
       case 'measure':
         for (const qubit of targets) {
+          const result = tableau.measure(qubit, random);
           measurements.push({
             qubit,
-            value: tableau.measure(qubit, options.seed),
-            probability: 0.5,
+            value: result.value,
+            probability: result.probability,
           });
         }
         break;
@@ -608,7 +681,7 @@ export class CliffordEngine implements ISimulationEngine {
   getStabilizers(circuit: Circuit): PauliOp[][] {
     const tableau = new StabilizerTableau(circuit.numQubits);
     for (const op of circuit.operations) {
-      this.applyOperation(tableau, op, {}, []);
+      this.applyOperation(tableau, op, Math.random, []);
     }
     return tableau.getStabilizers();
   }
