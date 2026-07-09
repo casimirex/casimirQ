@@ -1,16 +1,22 @@
 /**
  * Authentication Service
  *
- * Handles JWT token generation and validation
+ * Real JWT authentication: signs and verifies tokens with a server-side
+ * secret (via @nestjs/jwt) and checks passwords against bcrypt hashes.
+ *
+ * The user store is an in-memory seed for now — replace `users` with a
+ * database-backed user repository (and a signup flow) for production.
  */
 
 import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { JwtService, TokenExpiredError } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 
 export interface TokenPayload {
   sub: string;
   email: string;
-  iat: number;
-  exp: number;
+  iat?: number;
+  exp?: number;
 }
 
 export interface UserCredentials {
@@ -24,147 +30,100 @@ export interface TokenResponse {
   token_type: string;
 }
 
+interface StoredUser {
+  userId: string;
+  email: string;
+  passwordHash: string;
+}
+
+const EXPIRES_IN_SECONDS = 3600; // 1 hour
+
+// A constant valid hash used to equalize timing when the email is unknown,
+// reducing a user-enumeration side channel on the login endpoint.
+const DUMMY_HASH = bcrypt.hashSync('dummy-password-for-timing', 10);
+
 @Injectable()
 export class AuthService {
-  private readonly secretKey = 'your-secret-key-change-in-production';
-  private readonly expiresIn = 3600; // 1 hour
+  private readonly users: StoredUser[];
+
+  constructor(private readonly jwt: JwtService) {
+    const salt = bcrypt.genSaltSync(10);
+    this.users = [
+      {
+        userId: 'demo-user-id',
+        email: 'demo@example.com',
+        passwordHash: bcrypt.hashSync('demo', salt),
+      },
+      {
+        userId: 'admin-user-id',
+        email: 'admin@example.com',
+        passwordHash: bcrypt.hashSync('admin123', salt),
+      },
+    ];
+  }
 
   /**
-   * Generate JWT token for user
+   * Sign a JWT for the given subject.
    */
-  async generateToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): Promise<TokenResponse> {
-    const now = Math.floor(Date.now() / 1000);
-    const exp = now + this.expiresIn;
-
-    const header = {
-      alg: 'HS256',
-      typ: 'JWT',
-    };
-
-    const fullPayload = {
-      ...payload,
-      iat: now,
-      exp,
-    };
-
-    const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
-    const encodedPayload = this.base64UrlEncode(JSON.stringify(fullPayload));
-    const signature = this.generateSignature(encodedHeader, encodedPayload);
-
-    const token = `${encodedHeader}.${encodedPayload}.${signature}`;
-
+  async generateToken(payload: { sub: string; email: string }): Promise<TokenResponse> {
+    const access_token = await this.jwt.signAsync(
+      { sub: payload.sub, email: payload.email },
+      { expiresIn: EXPIRES_IN_SECONDS },
+    );
     return {
-      access_token: token,
-      expires_in: this.expiresIn,
+      access_token,
+      expires_in: EXPIRES_IN_SECONDS,
       token_type: 'Bearer',
     };
   }
 
   /**
-   * Validate and decode JWT token
+   * Verify a token's signature and expiry, returning its payload.
    */
   async validateToken(token: string): Promise<TokenPayload> {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new UnauthorizedException('Invalid token format');
+    try {
+      return await this.jwt.verifyAsync<TokenPayload>(token);
+    } catch (err) {
+      const message = err instanceof TokenExpiredError ? 'Token expired' : 'Invalid token';
+      throw new UnauthorizedException(message);
     }
-
-    const [encodedHeader, encodedPayload, signature] = parts;
-
-    // Verify signature
-    const expectedSignature = this.generateSignature(encodedHeader, encodedPayload);
-    if (signature !== expectedSignature) {
-      throw new UnauthorizedException('Invalid token signature');
-    }
-
-    // Decode payload
-    const payload: TokenPayload = JSON.parse(this.base64UrlDecode(encodedPayload));
-
-    // Check expiration
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp < now) {
-      throw new UnauthorizedException('Token expired');
-    }
-
-    return payload;
   }
 
   /**
-   * Authenticate user credentials
+   * Authenticate credentials against the user store (bcrypt password check).
    */
   async authenticateUser(credentials: UserCredentials): Promise<TokenResponse | null> {
-    // In a real implementation, verify against database
-    // Demo credentials for testing
-    const validCredentials = [
-      { email: 'demo@example.com', password: 'demo', userId: 'demo-user-id' },
-      { email: 'admin@example.com', password: 'admin123', userId: 'admin-user-id' },
-    ];
+    const user = this.users.find((u) => u.email === credentials.email);
+    const password = credentials.password ?? '';
 
-    const matched = validCredentials.find(
-      (c) => c.email === credentials.email && c.password === credentials.password,
-    );
-
-    if (matched) {
-      return this.generateToken({
-        sub: matched.userId,
-        email: credentials.email,
-      });
+    if (!user) {
+      // Compare against a dummy hash so response time does not reveal whether
+      // the email exists.
+      await bcrypt.compare(password, DUMMY_HASH);
+      return null;
     }
 
-    return null;
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) {
+      return null;
+    }
+
+    return this.generateToken({ sub: user.userId, email: user.email });
   }
 
   /**
-   * Refresh an existing token
+   * Verify a token and issue a fresh one for the same subject.
    */
   async refreshToken(token: string): Promise<TokenResponse> {
     const payload = await this.validateToken(token);
-    return this.generateToken({
-      sub: payload.sub,
-      email: payload.email,
-    });
+    return this.generateToken({ sub: payload.sub, email: payload.email });
   }
 
   /**
-   * Extract payload from token without validation
+   * Decode a token payload without verifying the signature.
    */
   decodeToken(token: string): Partial<TokenPayload> | null {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        return null;
-      }
-      return JSON.parse(this.base64UrlDecode(parts[1]));
-    } catch {
-      return null;
-    }
-  }
-
-  private base64UrlEncode(str: string): string {
-    return Buffer.from(str)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-  }
-
-  private base64UrlDecode(str: string): string {
-    // Add padding
-    const padding = '='.repeat((4 - str.length % 4) % 4);
-    const base64 = str.replace(/-/g, '+').replace(/_/g, '/') + padding;
-    return Buffer.from(base64, 'base64').toString();
-  }
-
-  private generateSignature(header: string, payload: string): string {
-    const crypto = require('crypto');
-    const data = `${header}.${payload}`;
-    const signature = crypto
-      .createHmac('sha256', this.secretKey)
-      .update(data)
-      .digest('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-    return signature;
+    const decoded = this.jwt.decode(token);
+    return decoded && typeof decoded === 'object' ? (decoded as TokenPayload) : null;
   }
 }

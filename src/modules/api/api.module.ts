@@ -5,6 +5,7 @@
  */
 
 import { Module } from '@nestjs/common';
+import { JwtModule } from '@nestjs/jwt';
 
 // Controllers
 import { CircuitsController } from './controllers/circuits.controller';
@@ -36,7 +37,15 @@ import { VisualizationGateway } from './gateways/visualization.gateway';
 import { JobsGateway } from './gateways/jobs.gateway';
 
 @Module({
-  imports: [SimulationEnginesModule],
+  imports: [
+    SimulationEnginesModule,
+    // JWT signing/verification. Set JWT_SECRET in production; the fallback is
+    // for local development only.
+    JwtModule.register({
+      secret: process.env.JWT_SECRET ?? 'dev-only-insecure-secret-change-me',
+      signOptions: { expiresIn: '1h' },
+    }),
+  ],
   controllers: [
     AuthController,
     CircuitsController,

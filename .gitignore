@@ -46,3 +46,7 @@ lerna-debug.log*
 
 # TS build info
 *.tsbuildinfo
+
+# Claude Code local/transient files
+.claude/settings.local.json
+.claude/*.tmp.*
