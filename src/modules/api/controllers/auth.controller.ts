@@ -27,9 +27,7 @@ export class AuthController {
    */
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async login(
-    @Body() credentials: UserCredentials,
-  ) {
+  async login(@Body() credentials: UserCredentials) {
     const token = await this.authService.authenticateUser(credentials);
 
     if (!token) {
@@ -49,13 +47,11 @@ export class AuthController {
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refresh(
-    @Body() body: { token: string },
-  ) {
+  async refresh(@Body() body: { token: string }) {
     try {
       const newToken = await this.authService.refreshToken(body.token);
       return newToken;
-    } catch (error) {
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
   }
@@ -89,9 +85,7 @@ export class AuthController {
    */
   @Post('validate')
   @HttpCode(HttpStatus.OK)
-  async validateToken(
-    @Body() body: { token: string },
-  ) {
+  async validateToken(@Body() body: { token: string }) {
     try {
       const payload = await this.authService.validateToken(body.token);
       return {
@@ -100,7 +94,7 @@ export class AuthController {
           sub: payload.sub,
           email: payload.email,
         },
-        expiresAt: new Date(payload.exp * 1000).toISOString(),
+        expiresAt: payload.exp ? new Date(payload.exp * 1000).toISOString() : null,
       };
     } catch (error: any) {
       return {

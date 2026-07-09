@@ -1,165 +1,139 @@
 /**
  * Auth Service Tests
  *
- * Tests for JWT authentication service
+ * Tests real JWT signing/verification and bcrypt-backed authentication.
  */
 
-import { AuthService } from '../auth.service';
+import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException } from '@nestjs/common';
+import { AuthService } from '../auth.service';
+
+const SECRET = 'test-secret';
 
 describe('AuthService', () => {
   let service: AuthService;
+  let jwt: JwtService;
 
   beforeEach(() => {
-    service = new AuthService();
+    jwt = new JwtService({ secret: SECRET, signOptions: { expiresIn: '1h' } });
+    service = new AuthService(jwt);
   });
 
   describe('generateToken', () => {
-    it('should generate a valid JWT token', async () => {
-      const payload = { sub: 'user-123', email: 'test@example.com' };
-      const token = await service.generateToken(payload);
-
+    it('generates a 3-part JWT', async () => {
+      const token = await service.generateToken({
+        sub: 'user-123',
+        email: 'test@example.com',
+      });
       expect(token).toHaveProperty('access_token');
-      expect(token).toHaveProperty('expires_in');
-      expect(token).toHaveProperty('token_type', 'Bearer');
-
-      // Verify token format (header.payload.signature)
-      const parts = token.access_token.split('.');
-      expect(parts).toHaveLength(3);
+      expect(token.token_type).toBe('Bearer');
+      expect(token.access_token.split('.')).toHaveLength(3);
     });
 
-    it('should include correct expiration time', async () => {
-      const payload = { sub: 'user-123', email: 'test@example.com' };
-      const token = await service.generateToken(payload);
-
-      expect(token.expires_in).toBe(3600); // 1 hour
+    it('sets a 1-hour expiry', async () => {
+      const token = await service.generateToken({
+        sub: 'user-123',
+        email: 'test@example.com',
+      });
+      expect(token.expires_in).toBe(3600);
     });
   });
 
   describe('validateToken', () => {
-    it('should validate a valid token', async () => {
-      const payload = { sub: 'user-123', email: 'test@example.com' };
-      const { access_token } = await service.generateToken(payload);
-
-      const validated = await service.validateToken(access_token);
-
-      expect(validated.sub).toBe('user-123');
-      expect(validated.email).toBe('test@example.com');
-    });
-
-    it('should throw on invalid token format', async () => {
-      await expect(service.validateToken('invalid-token')).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('should throw on invalid signature', async () => {
-      const payload = { sub: 'user-123', email: 'test@example.com' };
-      const { access_token } = await service.generateToken(payload);
-      const modifiedToken = access_token.slice(0, -10) + 'invalid';
-
-      await expect(service.validateToken(modifiedToken)).rejects.toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('should throw on expired token', async () => {
-      // Create an expired token manually
-      const expiredPayload = {
+    it('validates a genuine token', async () => {
+      const { access_token } = await service.generateToken({
         sub: 'user-123',
         email: 'test@example.com',
-        iat: 0,
-        exp: 1, // Expired in 1970
-      };
+      });
+      const payload = await service.validateToken(access_token);
+      expect(payload.sub).toBe('user-123');
+      expect(payload.email).toBe('test@example.com');
+    });
 
-      const header = { alg: 'HS256', typ: 'JWT' };
-      const encodedHeader = Buffer.from(JSON.stringify(header))
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-      const encodedPayload = Buffer.from(JSON.stringify(expiredPayload))
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
+    it('rejects a malformed token', async () => {
+      await expect(service.validateToken('not-a-jwt')).rejects.toThrow(UnauthorizedException);
+    });
 
-      // Generate a valid signature for this payload
-      const crypto = require('crypto');
-      const data = `${encodedHeader}.${encodedPayload}`;
-      const signature = crypto
-        .createHmac('sha256', 'your-secret-key-change-in-production')
-        .update(data)
-        .digest('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
+    it('rejects a tampered signature', async () => {
+      const { access_token } = await service.generateToken({
+        sub: 'user-123',
+        email: 'test@example.com',
+      });
+      const tampered = access_token.slice(0, -6) + 'AAAAAA';
+      await expect(service.validateToken(tampered)).rejects.toThrow(UnauthorizedException);
+    });
 
-      const expiredToken = `${encodedHeader}.${encodedPayload}.${signature}`;
+    it('rejects a token signed with a different secret (forgery)', async () => {
+      const forger = new JwtService({ secret: 'attacker-secret' });
+      const forged = forger.sign({
+        sub: 'admin-user-id',
+        email: 'admin@example.com',
+      });
+      await expect(service.validateToken(forged)).rejects.toThrow(UnauthorizedException);
+    });
 
-      await expect(service.validateToken(expiredToken)).rejects.toThrow(
-        'Token expired',
-      );
+    it('rejects an expired token', async () => {
+      const expired = jwt.sign({ sub: 'user-123', email: 'test@example.com' }, { expiresIn: -10 });
+      await expect(service.validateToken(expired)).rejects.toThrow('Token expired');
     });
   });
 
   describe('authenticateUser', () => {
-    it('should authenticate valid demo credentials', async () => {
-      const credentials = { email: 'demo@example.com', password: 'demo' };
-      const token = await service.authenticateUser(credentials);
-
+    it('authenticates valid demo credentials', async () => {
+      const token = await service.authenticateUser({
+        email: 'demo@example.com',
+        password: 'demo',
+      });
       expect(token).not.toBeNull();
       expect(token).toHaveProperty('access_token');
     });
 
-    it('should reject invalid credentials', async () => {
-      const credentials = { email: 'invalid@example.com', password: 'wrong' };
-      const token = await service.authenticateUser(credentials);
-
+    it('rejects an unknown email', async () => {
+      const token = await service.authenticateUser({
+        email: 'nobody@example.com',
+        password: 'demo',
+      });
       expect(token).toBeNull();
     });
 
-    it('should reject wrong password', async () => {
-      const credentials = { email: 'demo@example.com', password: 'wrong' };
-      const token = await service.authenticateUser(credentials);
-
+    it('rejects a wrong password', async () => {
+      const token = await service.authenticateUser({
+        email: 'demo@example.com',
+        password: 'wrong',
+      });
       expect(token).toBeNull();
     });
   });
 
   describe('refreshToken', () => {
-    it('should generate new token from valid token', async () => {
-      const payload = { sub: 'user-123', email: 'test@example.com' };
-      const { access_token } = await service.generateToken(payload);
-
-      const newToken = await service.refreshToken(access_token);
-
-      expect(newToken).toHaveProperty('access_token');
-      expect(newToken).not.toBe(access_token); // Different token
+    it('issues a valid token from a valid token', async () => {
+      const { access_token } = await service.generateToken({
+        sub: 'user-123',
+        email: 'test@example.com',
+      });
+      const refreshed = await service.refreshToken(access_token);
+      const payload = await service.validateToken(refreshed.access_token);
+      expect(payload.sub).toBe('user-123');
     });
 
-    it('should throw on invalid token', async () => {
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
-        UnauthorizedException,
-      );
+    it('rejects an invalid token', async () => {
+      await expect(service.refreshToken('invalid-token')).rejects.toThrow(UnauthorizedException);
     });
   });
 
   describe('decodeToken', () => {
-    it('should decode token payload without validation', () => {
-      const payload = { sub: 'user-123', email: 'test@example.com' };
-      service.generateToken(payload).then(({ access_token }) => {
-        const decoded = service.decodeToken(access_token);
-
-        expect(decoded).not.toBeNull();
-        expect(decoded!.sub).toBe('user-123');
-        expect(decoded!.email).toBe('test@example.com');
+    it('decodes a token payload without verifying', async () => {
+      const { access_token } = await service.generateToken({
+        sub: 'user-123',
+        email: 'test@example.com',
       });
+      const decoded = service.decodeToken(access_token);
+      expect(decoded?.sub).toBe('user-123');
+      expect(decoded?.email).toBe('test@example.com');
     });
 
-    it('should return null for invalid token', () => {
-      const decoded = service.decodeToken('invalid');
-      expect(decoded).toBeNull();
+    it('returns null for an invalid token', () => {
+      expect(service.decodeToken('invalid')).toBeNull();
     });
   });
 });

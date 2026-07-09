@@ -1,17 +1,13 @@
 /**
  * JWT Authentication Guard
  *
- * Protects routes using JWT token validation
+ * Protects routes by verifying the JWT signature and expiry (not just its
+ * shape) via AuthService, then attaching the authenticated user to the request.
  */
 
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Request } from 'express';
-import { Observable } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 // Extend Express Request type
 interface RequestWithUser extends Request {
@@ -20,9 +16,9 @@ interface RequestWithUser extends Request {
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  constructor(private readonly authService: AuthService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const token = this.extractTokenFromHeader(request);
 
@@ -30,53 +26,15 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('No token provided');
     }
 
-    // In a real implementation, verify JWT signature
-    // For now, validate token format
-    const isValid = this.validateToken(token);
-    if (!isValid) {
-      throw new UnauthorizedException('Invalid token');
-    }
+    // Throws UnauthorizedException if the signature is invalid or expired.
+    const payload = await this.authService.validateToken(token);
 
-    // Attach user info to request
-    request['user'] = this.decodeToken(token);
-
+    request.user = { userId: payload.sub, email: payload.email };
     return true;
   }
 
   private extractTokenFromHeader(request: RequestWithUser): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
-  }
-
-  private validateToken(token: string): boolean {
-    // Basic JWT format validation (header.payload.signature)
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return false;
-    }
-
-    // Check if parts are base64 encoded
-    try {
-      parts.forEach(part => {
-        Buffer.from(part, 'base64');
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  private decodeToken(token: string): { userId: string; email: string } {
-    try {
-      const payload = JSON.parse(
-        Buffer.from(token.split('.')[1], 'base64').toString(),
-      );
-      return {
-        userId: payload.sub || 'anonymous',
-        email: payload.email || 'unknown',
-      };
-    } catch {
-      return { userId: 'anonymous', email: 'unknown' };
-    }
   }
 }

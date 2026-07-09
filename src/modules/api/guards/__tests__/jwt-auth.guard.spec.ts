@@ -1,105 +1,78 @@
 /**
  * JWT Auth Guard Tests
  *
- * Tests for JWT authentication guard
+ * Verifies the guard actually validates token signatures (not just format).
  */
 
-import { JwtAuthGuard } from '../jwt-auth.guard';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { Request } from 'express';
+import { JwtService } from '@nestjs/jwt';
+import { JwtAuthGuard } from '../jwt-auth.guard';
+import { AuthService } from '../../services/auth.service';
 
-// Extend Request type for testing
-interface RequestWithUser extends Request {
-  user?: { userId: string; email: string };
+const SECRET = 'test-secret';
+
+function contextWith(headers: Record<string, string>, sink?: { user?: unknown }) {
+  const request: any = { headers, ...(sink ?? {}) };
+  return {
+    switchToHttp: () => ({ getRequest: () => request }),
+    __request: request,
+  } as unknown as ExecutionContext & { __request: any };
 }
 
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;
+  let jwt: JwtService;
 
   beforeEach(() => {
-    guard = new JwtAuthGuard();
+    jwt = new JwtService({ secret: SECRET, signOptions: { expiresIn: '1h' } });
+    guard = new JwtAuthGuard(new AuthService(jwt));
   });
 
-  const createMockContext = (headers: Record<string, string>): ExecutionContext => {
-    return {
-      switchToHttp: () => ({
-        getRequest: () => ({
-          headers,
-        } as Request),
-      }),
-    } as ExecutionContext;
-  };
+  it('allows a request with a genuine token', async () => {
+    const token = jwt.sign({ sub: 'user-1', email: 'test@example.com' });
+    const ctx = contextWith({ authorization: `Bearer ${token}` });
+    await expect(guard.canActivate(ctx)).resolves.toBe(true);
+  });
 
-  describe('canActivate', () => {
-    it('should allow request with valid JWT', () => {
-      const validToken =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
-        'eyJzdWIiOiJ1c2VyLTEiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpYXQiOjE2NDA5ODc2MDAsImV4cCI6MTY0MDk5MTIwMH0.' +
-        'signature';
-
-      const context = createMockContext({
-        authorization: `Bearer ${validToken}`,
-      });
-
-      const result = guard.canActivate(context);
-      expect(result).toBe(true);
+  it('attaches the authenticated user to the request', async () => {
+    const token = jwt.sign({ sub: 'user-123', email: 'test@example.com' });
+    const ctx = contextWith({ authorization: `Bearer ${token}` }) as any;
+    await guard.canActivate(ctx);
+    expect(ctx.__request.user).toEqual({
+      userId: 'user-123',
+      email: 'test@example.com',
     });
+  });
 
-    it('should throw when no authorization header', () => {
-      const context = createMockContext({});
+  it('throws when there is no authorization header', async () => {
+    await expect(guard.canActivate(contextWith({}))).rejects.toThrow(UnauthorizedException);
+  });
 
-      expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
+  it('throws when the scheme is not Bearer', async () => {
+    await expect(guard.canActivate(contextWith({ authorization: 'Basic creds' }))).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('rejects a structurally-valid but unsigned token (the old bypass)', async () => {
+    // header.payload.signature with a bogus signature — previously accepted.
+    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+    const payload = Buffer.from(
+      JSON.stringify({ sub: 'admin-user-id', email: 'admin@example.com' }),
+    ).toString('base64url');
+    const forged = `${header}.${payload}.not-a-real-signature`;
+    await expect(
+      guard.canActivate(contextWith({ authorization: `Bearer ${forged}` })),
+    ).rejects.toThrow(UnauthorizedException);
+  });
+
+  it('rejects a token signed with a different secret', async () => {
+    const forged = new JwtService({ secret: 'attacker' }).sign({
+      sub: 'admin-user-id',
+      email: 'admin@example.com',
     });
-
-    it('should throw when no Bearer token', () => {
-      const context = createMockContext({
-        authorization: 'Basic credentials',
-      });
-
-      expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
-    });
-
-    it('should throw when token format is invalid', () => {
-      const context = createMockContext({
-        authorization: 'Bearer invalid-token',
-      });
-
-      expect(() => guard.canActivate(context)).toThrow(UnauthorizedException);
-    });
-
-    it('should attach user to request', () => {
-      const payload = {
-        sub: 'user-123',
-        email: 'test@example.com',
-      };
-      const header = { alg: 'HS256', typ: 'JWT' };
-      const encodedHeader = Buffer.from(JSON.stringify(header))
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-      const encodedPayload = Buffer.from(JSON.stringify(payload))
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-      const token = `${encodedHeader}.${encodedPayload}.signature`;
-
-      const request = {
-        headers: { authorization: `Bearer ${token}` },
-      } as RequestWithUser;
-
-      const context = {
-        switchToHttp: () => ({
-          getRequest: () => request,
-        }),
-      } as ExecutionContext;
-
-      guard.canActivate(context);
-
-      expect(request.user).toBeDefined();
-      expect(request.user!.userId).toBe('user-123');
-      expect(request.user!.email).toBe('test@example.com');
-    });
+    await expect(
+      guard.canActivate(contextWith({ authorization: `Bearer ${forged}` })),
+    ).rejects.toThrow(UnauthorizedException);
   });
 });

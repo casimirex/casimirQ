@@ -7,13 +7,16 @@
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../../services/auth.service';
 import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: AuthService;
 
   beforeEach(() => {
-    authService = new AuthService();
+    authService = new AuthService(
+      new JwtService({ secret: 'test-secret', signOptions: { expiresIn: '1h' } }),
+    );
     controller = new AuthController(authService);
   });
 
@@ -30,9 +33,7 @@ describe('AuthController', () => {
     it('should throw for invalid credentials', async () => {
       const credentials = { email: 'invalid@example.com', password: 'wrong' };
 
-      await expect(controller.login(credentials)).rejects.toThrow(
-        UnauthorizedException,
-      );
+      await expect(controller.login(credentials)).rejects.toThrow(UnauthorizedException);
     });
   });
 
@@ -44,7 +45,7 @@ describe('AuthController', () => {
       });
 
       // Wait a small amount to ensure different timestamp
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const result = await controller.refresh({ token: access_token });
 
@@ -54,9 +55,9 @@ describe('AuthController', () => {
     });
 
     it('should throw for invalid token', async () => {
-      await expect(
-        controller.refresh({ token: 'invalid-token' }),
-      ).rejects.toThrow(UnauthorizedException);
+      await expect(controller.refresh({ token: 'invalid-token' })).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
   });
 
