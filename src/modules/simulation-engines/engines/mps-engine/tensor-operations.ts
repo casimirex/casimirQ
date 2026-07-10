@@ -18,9 +18,9 @@ import { Complex } from '../../../../common/utils/complex';
 export class Tensor3 {
   constructor(
     public readonly data: Complex[][][],
-    public readonly dPhys: number,    // Physical dimension (usually 2)
-    public readonly dLeft: number,    // Left bond dimension
-    public readonly dRight: number,   // Right bond dimension
+    public readonly dPhys: number, // Physical dimension (usually 2)
+    public readonly dLeft: number, // Left bond dimension
+    public readonly dRight: number, // Right bond dimension
   ) {}
 
   /**
@@ -92,12 +92,7 @@ export class Tensor3 {
   /**
    * Create tensor from matrix after SVD
    */
-  static fromMatrix(
-    matrix: Complex[][],
-    dPhys: number,
-    dLeft: number,
-    dRight: number,
-  ): Tensor3 {
+  static fromMatrix(matrix: Complex[][], dPhys: number, dLeft: number, dRight: number): Tensor3 {
     const tensor = Tensor3.zeros(dPhys, dLeft, dRight);
 
     for (let i = 0; i < dPhys; i++) {
@@ -222,10 +217,7 @@ export class Tensor4 {
    * Split back into two Tensor3s using SVD
    * Returns [A, B] where A is left tensor, B is right tensor
    */
-  split(
-    maxBondDim: number,
-    minSingularValue: number = 1e-12,
-  ): [Tensor3, Tensor3, number[]] {
+  split(maxBondDim: number, minSingularValue: number = 1e-12): [Tensor3, Tensor3, number[]] {
     // Reshape to matrix
     const { matrix, rows, cols } = this.reshapeToMatrix();
 
@@ -233,7 +225,7 @@ export class Tensor4 {
     const svd = computeSVD(matrix, rows, cols);
 
     // Truncate
-    const singularValues = svd.singularValues.filter(s => s > minSingularValue);
+    const singularValues = svd.singularValues.filter((s) => s > minSingularValue);
     const newBondDim = Math.min(singularValues.length, maxBondDim);
 
     // Reconstruct tensors
@@ -295,17 +287,12 @@ interface SVDResult {
  * Compute SVD using Jacobi-like method for small matrices
  * For production, use LAPACK or similar library
  */
-function computeSVD(
-  matrix: Complex[][],
-  rows: number,
-  cols: number,
-): SVDResult {
+function computeSVD(matrix: Complex[][], rows: number, cols: number): SVDResult {
   // For now, use a simplified SVD suitable for small matrices
   // In production, this should call a robust SVD library
 
   // Convert to real representation (for simplicity)
   const m = Math.min(rows, cols);
-  const n = Math.max(rows, cols);
 
   // For small matrices, we can use power iteration
   // This is a placeholder - production code should use proper SVD
@@ -355,7 +342,7 @@ export function truncateSingularValues(
   cutoff: number = 1e-12,
 ): number[] {
   // Filter small values
-  const filtered = singularValues.filter(s => s > cutoff);
+  const filtered = singularValues.filter((s) => s > cutoff);
 
   // Truncate to maxBondDim
   return filtered.slice(0, maxBondDim);

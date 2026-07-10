@@ -9,7 +9,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   IAnsatz,
   IFeatureMap,
-  IQuantumKernel,
   ITrainingData,
   IOptimizerConfig,
   IVQEConfig,
@@ -114,30 +113,21 @@ export class QuantumMLService {
   /**
    * Compute quantum kernel matrix element
    */
-  computeKernelElement(
-    x: number[],
-    y: number[],
-    featureMap: IFeatureMap,
-  ): number {
+  computeKernelElement(x: number[], y: number[], featureMap: IFeatureMap): number {
     // Simplified kernel computation
     // Full implementation would encode x and y, then compute overlap
 
     // Compute Euclidean distance in feature space
-    const distance = Math.sqrt(
-      x.reduce((sum, xi, i) => sum + Math.pow(xi - y[i], 2), 0),
-    );
+    const distance = Math.sqrt(x.reduce((sum, xi, i) => sum + Math.pow(xi - y[i], 2), 0));
 
     // RBF-like kernel
-    return Math.exp(-distance * distance / (2 * featureMap.featureDimension));
+    return Math.exp((-distance * distance) / (2 * featureMap.featureDimension));
   }
 
   /**
    * Compute full kernel matrix
    */
-  computeKernelMatrix(
-    X: number[][],
-    featureMap: IFeatureMap,
-  ): number[][] {
+  computeKernelMatrix(X: number[][], featureMap: IFeatureMap): number[][] {
     const n = X.length;
     const matrix: number[][] = [];
 
@@ -183,9 +173,7 @@ export class QuantumMLService {
       // Simple SPSA update
       if (optimizer.type === 'SPSA') {
         const delta = 0.1;
-        const perturbation = currentParams.map(() =>
-          (Math.random() < 0.5 ? 1 : -1) * delta,
-        );
+        const perturbation = currentParams.map(() => (Math.random() < 0.5 ? 1 : -1) * delta);
 
         const paramsPlus = currentParams.map((p, i) => p + perturbation[i]);
         const paramsMinus = currentParams.map((p, i) => p - perturbation[i]);
@@ -193,8 +181,8 @@ export class QuantumMLService {
         const lossPlus = lossFunction(paramsPlus);
         const lossMinus = lossFunction(paramsMinus);
 
-        const gradient = perturbation.map((pert, i) =>
-          (lossPlus - lossMinus) / (2 * pert * delta),
+        const gradient = perturbation.map(
+          (pert, _i) => (lossPlus - lossMinus) / (2 * pert * delta),
         );
 
         const lr = optimizer.learningRate ?? 0.1;
@@ -246,7 +234,7 @@ export class QuantumMLService {
     }
 
     // Define loss function (energy expectation)
-    const lossFunction = (theta: number[]): number => {
+    const lossFunction = (_theta: number[]): number => {
       // Simplified energy calculation
       // Full implementation would execute quantum circuit
       let energy = 0;
@@ -372,10 +360,7 @@ export class QuantumMLService {
   /**
    * Encode classical features to quantum state
    */
-  private encodeFeatures(
-    features: number[],
-    featureMap: IFeatureMap,
-  ): number[] {
+  private encodeFeatures(features: number[], featureMap: IFeatureMap): number[] {
     // Simplified feature encoding
     // Full implementation would create quantum circuit
 

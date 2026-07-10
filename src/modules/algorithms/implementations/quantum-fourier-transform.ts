@@ -1,4 +1,4 @@
-import { Circuit, CircuitBuilder } from '../../circuit-engine/circuit';
+import { Circuit } from '../../circuit-engine/circuit';
 import {
   IQuantumAlgorithm,
   AlgorithmAnalysis,
@@ -20,8 +20,7 @@ import { SimulationEnginesService } from '../../simulation-engines/simulation-en
  */
 export class QuantumFourierTransform implements IQuantumAlgorithm {
   readonly name = 'Quantum Fourier Transform';
-  readonly description =
-    'Transforms a quantum state to the Fourier basis using O(n²) gates';
+  readonly description = 'Transforms a quantum state to the Fourier basis using O(n²) gates';
   readonly category = 'fundamental' as const;
   readonly references = [
     'Nielsen & Chuang, "Quantum Computation and Quantum Information", Section 5.1',
@@ -154,7 +153,7 @@ export class QuantumFourierTransform implements IQuantumAlgorithm {
    */
   execute(
     n: number,
-    initialState?: { index: bigint; amplitude: { re: number; im: number } }[],
+    _initialState?: { index: bigint; amplitude: { re: number; im: number } }[],
   ): AlgorithmResult {
     const circuit = this.buildCircuit(n);
     const startTime = performance.now();

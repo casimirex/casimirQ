@@ -29,11 +29,7 @@ export class VisualizationService {
   /**
    * Generate Bloch sphere data for a qubit state
    */
-  generateBlochSphere(
-    alpha: Complex,
-    beta: Complex,
-    radius: number = 1,
-  ): IBlochSphereData {
+  generateBlochSphere(alpha: Complex, beta: Complex, radius: number = 1): IBlochSphereData {
     const bloch = this.blochService.amplitudesToBloch(alpha, beta);
 
     const state: IQubitState = {
@@ -109,16 +105,13 @@ export class VisualizationService {
     numQubits: number,
     entanglementPairs: Array<{ q1: number; q2: number; type: string }>,
   ): IEntanglementGraph {
-    const nodes: IEntanglementGraph['nodes'] = Array.from(
-      { length: numQubits },
-      (_, i) => ({
-        id: i,
-        label: `q${i}`,
-        x: Math.cos((2 * Math.PI * i) / numQubits) * 100 + 150,
-        y: Math.sin((2 * Math.PI * i) / numQubits) * 100 + 150,
-        state: 'superposition',
-      }),
-    );
+    const nodes: IEntanglementGraph['nodes'] = Array.from({ length: numQubits }, (_, i) => ({
+      id: i,
+      label: `q${i}`,
+      x: Math.cos((2 * Math.PI * i) / numQubits) * 100 + 150,
+      y: Math.sin((2 * Math.PI * i) / numQubits) * 100 + 150,
+      state: 'superposition',
+    }));
 
     const edges: IEntanglementGraph['edges'] = entanglementPairs.map((pair) => ({
       source: pair.q1,

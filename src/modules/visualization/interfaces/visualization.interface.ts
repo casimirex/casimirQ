@@ -1,13 +1,11 @@
-import { Complex } from '../../../common/utils/complex';
-
 /**
  * Qubit state representation for visualization
  */
 export interface IQubitState {
   /** Bloch sphere coordinates */
   bloch: {
-    theta: number;  // Polar angle (0 to π)
-    phi: number;    // Azimuthal angle (0 to 2π)
+    theta: number; // Polar angle (0 to π)
+    phi: number; // Azimuthal angle (0 to 2π)
   };
 
   /** Probability amplitudes */
@@ -96,7 +94,7 @@ export interface ICircuitDiagram {
   connections: {
     from: { gate: string; port: string };
     to: { gate: string; port: string };
-    path: string;  // SVG path
+    path: string; // SVG path
   }[];
 }
 
@@ -140,9 +138,9 @@ export interface IEntanglementGraph {
   edges: {
     source: number;
     target: number;
-    strength: number;  // 0 to 1
+    strength: number; // 0 to 1
     type: 'bell' | 'ghz' | 'w' | 'custom';
-    correlation: number;  // -1 to 1
+    correlation: number; // -1 to 1
   }[];
 }
 

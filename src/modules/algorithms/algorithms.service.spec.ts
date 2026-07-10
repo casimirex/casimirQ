@@ -48,9 +48,7 @@ describe('AlgorithmsService', () => {
 
   describe('executeVQE', () => {
     it('should execute VQE algorithm', () => {
-      const hamiltonian = [
-        { coefficient: 1.0, paulis: ['Z' as const], qubits: [0] },
-      ];
+      const hamiltonian = [{ coefficient: 1.0, paulis: ['Z' as const], qubits: [0] }];
       const result = service.executeVQE(1, hamiltonian, 10);
       expect(result).toBeDefined();
       expect(result.metrics).toBeDefined();

@@ -1,5 +1,4 @@
 import { GateRegistry } from './gate-registry';
-import { Matrix } from '../../common/utils/matrix';
 import { HGate, XGate } from './standard-gates/single-qubit-gates';
 import { CnotGate } from './standard-gates/multi-qubit-gates';
 
@@ -143,7 +142,6 @@ describe('GateRegistry', () => {
 
     it('should allow retrieving and using gate matrix', () => {
       const h = registry.getGate('h');
-      const state = [1, 0];
       // Test that matrix can be used
       expect(h?.matrix.multiplyVector).toBeDefined();
     });

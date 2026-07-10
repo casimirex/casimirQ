@@ -17,7 +17,7 @@ export interface IGate {
 
   /**
    * Matrix representation of the gate
-     */
+   */
   readonly matrix: Matrix;
 
   /**

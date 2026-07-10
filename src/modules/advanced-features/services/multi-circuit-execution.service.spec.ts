@@ -80,9 +80,7 @@ describe('MultiCircuitExecutionService', () => {
     });
 
     it('should track failed circuits', async () => {
-      const circuits = [
-        { id: 'c1', circuit: Circuit.builder(1).build() },
-      ];
+      const circuits = [{ id: 'c1', circuit: Circuit.builder(1).build() }];
 
       const options = {
         strategy: 'sequential' as const,
@@ -96,9 +94,7 @@ describe('MultiCircuitExecutionService', () => {
       const onCircuitComplete = jest.fn();
       const onBatchComplete = jest.fn();
 
-      const circuits = [
-        { id: 'c1', circuit: Circuit.builder(1).build() },
-      ];
+      const circuits = [{ id: 'c1', circuit: Circuit.builder(1).build() }];
 
       const options = {
         strategy: 'sequential' as const,
@@ -229,8 +225,26 @@ describe('MultiCircuitExecutionService', () => {
       ];
 
       const nodes = [
-        { id: 'n1', status: 'idle' as const, capabilities: { maxQubits: 10, supportedEngines: ['statevector'], gpuAvailable: false, memoryBytes: 1000000 } },
-        { id: 'n2', status: 'idle' as const, capabilities: { maxQubits: 10, supportedEngines: ['statevector'], gpuAvailable: false, memoryBytes: 1000000 } },
+        {
+          id: 'n1',
+          status: 'idle' as const,
+          capabilities: {
+            maxQubits: 10,
+            supportedEngines: ['statevector'],
+            gpuAvailable: false,
+            memoryBytes: 1000000,
+          },
+        },
+        {
+          id: 'n2',
+          status: 'idle' as const,
+          capabilities: {
+            maxQubits: 10,
+            supportedEngines: ['statevector'],
+            gpuAvailable: false,
+            memoryBytes: 1000000,
+          },
+        },
       ];
 
       const result = await service.executeDistributed(tasks, nodes);
@@ -245,10 +259,21 @@ describe('MultiCircuitExecutionService', () => {
       ];
 
       const nodes = [
-        { id: 'n1', status: 'busy' as const, capabilities: { maxQubits: 10, supportedEngines: ['statevector'], gpuAvailable: false, memoryBytes: 1000000 } },
+        {
+          id: 'n1',
+          status: 'busy' as const,
+          capabilities: {
+            maxQubits: 10,
+            supportedEngines: ['statevector'],
+            gpuAvailable: false,
+            memoryBytes: 1000000,
+          },
+        },
       ];
 
-      await expect(service.executeDistributed(tasks, nodes)).rejects.toThrow('No available execution nodes');
+      await expect(service.executeDistributed(tasks, nodes)).rejects.toThrow(
+        'No available execution nodes',
+      );
     });
 
     it('should track node utilization', async () => {
@@ -258,7 +283,16 @@ describe('MultiCircuitExecutionService', () => {
       ];
 
       const nodes = [
-        { id: 'n1', status: 'idle' as const, capabilities: { maxQubits: 10, supportedEngines: ['statevector'], gpuAvailable: false, memoryBytes: 1000000 } },
+        {
+          id: 'n1',
+          status: 'idle' as const,
+          capabilities: {
+            maxQubits: 10,
+            supportedEngines: ['statevector'],
+            gpuAvailable: false,
+            memoryBytes: 1000000,
+          },
+        },
       ];
 
       const result = await service.executeDistributed(tasks, nodes);
@@ -284,7 +318,10 @@ describe('MultiCircuitExecutionService', () => {
       ];
 
       const sequentialTime = service.estimateBatchTime(circuits, { strategy: 'sequential' });
-      const parallelTime = service.estimateBatchTime(circuits, { strategy: 'parallel', maxParallel: 2 });
+      const parallelTime = service.estimateBatchTime(circuits, {
+        strategy: 'parallel',
+        maxParallel: 2,
+      });
 
       expect(sequentialTime).toBeGreaterThan(0);
       expect(parallelTime).toBeGreaterThan(0);

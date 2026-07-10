@@ -308,28 +308,19 @@ describe('BlochSphereService Extended', () => {
 
     it('should convert |+> amplitudes to Bloch angles', () => {
       const invSqrt2 = 1 / Math.sqrt(2);
-      const result = service.amplitudesToBloch(
-        new Complex(invSqrt2, 0),
-        new Complex(invSqrt2, 0)
-      );
+      const result = service.amplitudesToBloch(new Complex(invSqrt2, 0), new Complex(invSqrt2, 0));
       expect(result.theta).toBeCloseTo(Math.PI / 2, 5);
     });
 
     it('should convert complex amplitudes to Bloch angles', () => {
-      const result = service.amplitudesToBloch(
-        new Complex(0.6, 0.2),
-        new Complex(0.4, 0.6)
-      );
+      const result = service.amplitudesToBloch(new Complex(0.6, 0.2), new Complex(0.4, 0.6));
       expect(result).toBeDefined();
       expect(result.theta).toBeGreaterThanOrEqual(0);
       expect(result.theta).toBeLessThanOrEqual(Math.PI);
     });
 
     it('should handle purely imaginary amplitudes', () => {
-      const result = service.amplitudesToBloch(
-        new Complex(0, 1),
-        new Complex(0, 0)
-      );
+      const result = service.amplitudesToBloch(new Complex(0, 1), new Complex(0, 0));
       expect(result).toBeDefined();
       expect(result.theta).toBeCloseTo(0, 5);
     });

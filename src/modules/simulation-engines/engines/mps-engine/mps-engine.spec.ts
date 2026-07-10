@@ -52,17 +52,15 @@ describe('MPSEngine', () => {
     });
 
     it('should execute rotation gates', () => {
-      const circuit = Circuit.builder(1)
-        .rx(0, 0.5)
-        .ry(0, 0.3)
-        .rz(0, 0.7)
-        .build();
+      const circuit = Circuit.builder(1).rx(0, 0.5).ry(0, 0.3).rz(0, 0.7).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should execute phase gate', () => {
-      const circuit = Circuit.builder(1).p(0, Math.PI / 4).build();
+      const circuit = Circuit.builder(1)
+        .p(0, Math.PI / 4)
+        .build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
@@ -70,36 +68,28 @@ describe('MPSEngine', () => {
 
   describe('Two-Qubit Operations', () => {
     it('should execute CNOT gate', () => {
-      const circuit = Circuit.builder(2)
-        .h(0)
-        .cx(0, 1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
       expect(result.statevector).toBeDefined();
     });
 
     it('should execute CZ gate', () => {
-      const circuit = Circuit.builder(2)
-        .h(0).h(1)
-        .cz(0, 1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).h(1).cz(0, 1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should execute SWAP gate', () => {
-      const circuit = Circuit.builder(2)
-        .x(0)
-        .swap(0, 1)
-        .build();
+      const circuit = Circuit.builder(2).x(0).swap(0, 1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should execute controlled phase gate', () => {
       const circuit = Circuit.builder(2)
-        .h(0).h(1)
+        .h(0)
+        .h(1)
         .cp(0, 1, Math.PI / 4)
         .build();
       const result = engine.simulate(circuit);
@@ -109,31 +99,21 @@ describe('MPSEngine', () => {
 
   describe('Measurement Operations', () => {
     it('should handle measurement on single qubit', () => {
-      const circuit = Circuit.builder(1)
-        .h(0)
-        .measure(0)
-        .build();
+      const circuit = Circuit.builder(1).h(0).measure(0).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
       // MPS engine skips measurements (not fully implemented)
     });
 
     it('should handle multiple measurements', () => {
-      const circuit = Circuit.builder(2)
-        .h(0).h(1)
-        .measure(0)
-        .measure(1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).h(1).measure(0).measure(1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
       // MPS engine skips measurements (not fully implemented)
     });
 
     it('should collapse state on measurement', () => {
-      const circuit = Circuit.builder(1)
-        .h(0)
-        .measure(0)
-        .build();
+      const circuit = Circuit.builder(1).h(0).measure(0).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
@@ -154,41 +134,26 @@ describe('MPSEngine', () => {
     });
 
     it('should handle bell state creation', () => {
-      const circuit = Circuit.builder(2)
-        .h(0)
-        .cx(0, 1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
       expect(result.statevector).toBeDefined();
     });
 
     it('should handle ghz state creation', () => {
-      const circuit = Circuit.builder(4)
-        .h(0)
-        .cx(0, 1)
-        .cx(1, 2)
-        .cx(2, 3)
-        .build();
+      const circuit = Circuit.builder(4).h(0).cx(0, 1).cx(1, 2).cx(2, 3).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should handle sequential CNOTs', () => {
-      const circuit = Circuit.builder(3)
-        .h(0)
-        .cx(0, 1)
-        .cx(1, 2)
-        .build();
+      const circuit = Circuit.builder(3).h(0).cx(0, 1).cx(1, 2).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should handle alternating operations', () => {
-      const circuit = Circuit.builder(2)
-        .x(0).h(0).z(0).h(0)
-        .x(1).h(1).z(1).h(1)
-        .build();
+      const circuit = Circuit.builder(2).x(0).h(0).z(0).h(0).x(1).h(1).z(1).h(1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
@@ -205,12 +170,7 @@ describe('MPSEngine', () => {
       const smallEngine = new MPSEngine(16);
       const largeEngine = new MPSEngine(64);
 
-      const circuit = Circuit.builder(4)
-        .h(0)
-        .cx(0, 1)
-        .cx(1, 2)
-        .cx(2, 3)
-        .build();
+      const circuit = Circuit.builder(4).h(0).cx(0, 1).cx(1, 2).cx(2, 3).build();
 
       const smallResult = smallEngine.simulate(circuit);
       const largeResult = largeEngine.simulate(circuit);
@@ -254,11 +214,7 @@ describe('MPSEngine', () => {
     });
 
     it('should handle mixed state preparation', () => {
-      const circuit = Circuit.builder(2)
-        .h(0)
-        .h(1)
-        .cx(0, 1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).h(1).cx(0, 1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });

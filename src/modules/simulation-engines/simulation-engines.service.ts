@@ -156,9 +156,7 @@ export class SimulationEnginesService {
   ): ISimulationResult {
     const selection = this.selectEngine(circuit, options.engine);
 
-    this.logger.log(
-      `Using ${selection.engineType} engine: ${selection.reason}`,
-    );
+    this.logger.log(`Using ${selection.engineType} engine: ${selection.reason}`);
 
     return selection.engine.simulate(circuit, options);
   }
@@ -200,9 +198,7 @@ export class SimulationEnginesService {
         results.set(engineType, result);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        this.logger.warn(
-          `Engine ${engineType} failed: ${errorMessage}`,
-        );
+        this.logger.warn(`Engine ${engineType} failed: ${errorMessage}`);
       }
     }
 

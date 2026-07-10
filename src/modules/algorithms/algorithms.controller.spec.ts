@@ -5,7 +5,6 @@ import { SimulationEnginesModule } from '../simulation-engines/simulation-engine
 
 describe('AlgorithmsController', () => {
   let controller: AlgorithmsController;
-  let service: AlgorithmsService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -15,7 +14,6 @@ describe('AlgorithmsController', () => {
     }).compile();
 
     controller = module.get<AlgorithmsController>(AlgorithmsController);
-    service = module.get<AlgorithmsService>(AlgorithmsService);
   });
 
   it('should be defined', () => {
@@ -95,7 +93,10 @@ describe('AlgorithmsController', () => {
     it('should execute QAOA', async () => {
       const dto = {
         n: 3,
-        edges: [[0, 1], [1, 2]] as [number, number][],
+        edges: [
+          [0, 1],
+          [1, 2],
+        ] as [number, number][],
         p: 1,
       };
       const result = await controller.executeQAOA(dto);

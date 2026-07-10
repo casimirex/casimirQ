@@ -3,6 +3,7 @@ import { QiskitAdapter } from './qiskit-adapter';
 import { CirqAdapter } from './cirq-adapter';
 import { QuilAdapter } from './quil-adapter';
 import { IonQAdapter } from './ionq-adapter';
+import { Circuit } from '../../circuit-engine/circuit';
 
 describe('Format Adapters', () => {
   describe('OpenQASMAdapter', () => {
@@ -61,7 +62,6 @@ rz(3*pi/4) q[0];`;
     });
 
     it('should serialize circuit to QASM', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
 
       const output = adapter.serialize(circuit, { includeComments: true });
@@ -70,7 +70,6 @@ rz(3*pi/4) q[0];`;
     });
 
     it('should serialize without comments', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).build();
 
       const output = adapter.serialize(circuit, { includeComments: false });
@@ -147,9 +146,7 @@ h q[0];
     it('should parse with alternative field names', () => {
       const json = JSON.stringify({
         n_qubits: 2,
-        ops: [
-          { name: 'x', qubits: [0] },
-        ],
+        ops: [{ name: 'x', qubits: [0] }],
       });
 
       const circuit = adapter.parse(json);
@@ -170,7 +167,6 @@ h q[0];
     });
 
     it('should serialize circuit', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
 
       const output = adapter.serialize(circuit, { includeMetadata: true });
@@ -250,7 +246,6 @@ h q[0];
     });
 
     it('should serialize circuit', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).build();
 
       const output = adapter.serialize(circuit, { includeMetadata: true });
@@ -328,7 +323,6 @@ RY(1.57079632679) 1`;
     });
 
     it('should serialize circuit', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).build();
 
       const output = adapter.serialize(circuit, { includeComments: true });
@@ -412,7 +406,6 @@ X 1`;
     });
 
     it('should serialize circuit', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).build();
 
       const output = adapter.serialize(circuit, { includeMetadata: true });

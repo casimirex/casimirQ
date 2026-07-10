@@ -25,8 +25,7 @@ import { SimulationEnginesService } from '../../simulation-engines/simulation-en
  */
 export class GroversSearch implements IQuantumAlgorithm {
   readonly name = "Grover's Search";
-  readonly description =
-    'Searches unstructured database in O(√N) with quadratic speedup';
+  readonly description = 'Searches unstructured database in O(√N) with quadratic speedup';
   readonly category = 'search' as const;
   readonly references = [
     'Grover, "Quantum mechanics helps in searching for a needle in a haystack", PRL 79, 325 (1997)',
@@ -115,11 +114,7 @@ export class GroversSearch implements IQuantumAlgorithm {
    * Apply oracle that phase-flips the marked item.
    * Uses a multi-controlled Z gate.
    */
-  private applyOracle(
-    builder: CircuitBuilder,
-    n: number,
-    markedItem: number,
-  ): CircuitBuilder {
+  private applyOracle(builder: CircuitBuilder, n: number, markedItem: number): CircuitBuilder {
     // Oracle: flip phase of |markedItem⟩
     // We implement this by flipping bits where markedItem has 0s,
     // then applying multi-controlled Z, then flipping back
@@ -218,10 +213,7 @@ export class GroversSearch implements IQuantumAlgorithm {
    * Apply multi-controlled Z gate.
    * Decomposes using Toffoli gates and ancilla qubits.
    */
-  private applyMultiControlledZ(
-    builder: CircuitBuilder,
-    n: number,
-  ): CircuitBuilder {
+  private applyMultiControlledZ(builder: CircuitBuilder, n: number): CircuitBuilder {
     // For n qubits, we need to implement controlled^{n-1}-Z
     // Using ancilla qubits: controlled^{n-1}-Z = cascade of Toffolis
 
@@ -284,12 +276,7 @@ export class GroversSearch implements IQuantumAlgorithm {
   /**
    * Execute Grover's search.
    */
-  execute(
-    n: number,
-    markedItem: number,
-    iterations?: number,
-    shots = 1000,
-  ): AlgorithmResult {
+  execute(n: number, markedItem: number, iterations?: number, shots = 1000): AlgorithmResult {
     const circuit = this.buildCircuit(n, markedItem, iterations);
     const startTime = performance.now();
 

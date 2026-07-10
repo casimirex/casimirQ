@@ -1,4 +1,10 @@
-import { Circuit, CircuitBuilder, createBellStateCircuit, createGHZStateCircuit, createWStateCircuit, createQFTCircuit } from './circuit';
+import {
+  Circuit,
+  createBellStateCircuit,
+  createGHZStateCircuit,
+  createWStateCircuit,
+  createQFTCircuit,
+} from './circuit';
 import { Matrix } from '../../common/utils/matrix';
 import { Complex } from '../../common/utils/complex';
 
@@ -61,7 +67,8 @@ describe('Circuit', () => {
 
     it('should apply controlled rotation gates', () => {
       let circuit = Circuit.create(2);
-      circuit = circuit.crx(0, 1, Math.PI / 2)
+      circuit = circuit
+        .crx(0, 1, Math.PI / 2)
         .cry(0, 1, Math.PI / 2)
         .crz(0, 1, Math.PI / 2);
       expect(circuit.gateCount()).toBe(3);
@@ -114,10 +121,7 @@ describe('Circuit', () => {
 
   describe('Circuit Metadata', () => {
     it('should return correct metadata', () => {
-      const circuit = Circuit.create(3, 'test')
-        .h(0)
-        .cx(0, 1)
-        .cx(1, 2);
+      const circuit = Circuit.create(3, 'test').h(0).cx(0, 1).cx(1, 2);
 
       const metadata = circuit.getMetadata();
       expect(metadata.qubitCount).toBe(3);
@@ -129,18 +133,12 @@ describe('Circuit', () => {
     });
 
     it('should calculate depth', () => {
-      const circuit = Circuit.create(2)
-        .h(0)
-        .cx(0, 1)
-        .h(1);
+      const circuit = Circuit.create(2).h(0).cx(0, 1).h(1);
       expect(circuit.depth()).toBe(3);
     });
 
     it('should count gates by type', () => {
-      const circuit = Circuit.create(2)
-        .h(0)
-        .h(1)
-        .cx(0, 1);
+      const circuit = Circuit.create(2).h(0).h(1).cx(0, 1);
       const counts = circuit.gateCountByType();
       expect(counts.get('h')).toBe(2);
       expect(counts.get('x')).toBe(1);
@@ -184,25 +182,36 @@ describe('Circuit', () => {
 
   describe('CircuitBuilder', () => {
     it('should build circuit fluently', () => {
-      const circuit = Circuit.builder(2)
-        .h(0)
-        .cx(0, 1)
-        .measure(0)
-        .build();
+      const circuit = Circuit.builder(2).h(0).cx(0, 1).measure(0).build();
 
       expect(circuit.getMetadata().gateCount).toBe(3);
     });
 
     it('should support all gate methods', () => {
       const circuit = Circuit.builder(3)
-        .h(0).x(1).y(2).z(0)
-        .s(1).sdg(2).t(0).tdg(1)
-        .cx(0, 1).cy(1, 2).cz(0, 2)
-        .ch(0, 1).swap(1, 2)
-        .ccx(0, 1, 2).cswap(0, 1, 2)
-        .rx(0, 0.5).ry(1, 0.5).rz(2, 0.5)
-        .p(0, Math.PI / 4).cp(0, 1, Math.PI / 2)
-        .crx(0, 1, 0.5).cry(0, 1, 0.5).crz(0, 1, 0.5)
+        .h(0)
+        .x(1)
+        .y(2)
+        .z(0)
+        .s(1)
+        .sdg(2)
+        .t(0)
+        .tdg(1)
+        .cx(0, 1)
+        .cy(1, 2)
+        .cz(0, 2)
+        .ch(0, 1)
+        .swap(1, 2)
+        .ccx(0, 1, 2)
+        .cswap(0, 1, 2)
+        .rx(0, 0.5)
+        .ry(1, 0.5)
+        .rz(2, 0.5)
+        .p(0, Math.PI / 4)
+        .cp(0, 1, Math.PI / 2)
+        .crx(0, 1, 0.5)
+        .cry(0, 1, 0.5)
+        .crz(0, 1, 0.5)
         .barrier()
         .measure(0)
         .build();
@@ -211,9 +220,7 @@ describe('Circuit', () => {
     });
 
     it('should handle barrier with targets', () => {
-      const circuit = Circuit.builder(3)
-        .barrier([0, 1])
-        .build();
+      const circuit = Circuit.builder(3).barrier([0, 1]).build();
       expect(circuit.getMetadata().gateCount).toBe(1);
     });
   });
@@ -265,7 +272,9 @@ describe('Circuit', () => {
         .h(0)
         .cx(0, 1)
         .cx(1, 2)
-        .h(0).h(1).h(2)
+        .h(0)
+        .h(1)
+        .h(2)
         .cx(0, 1)
         .swap(1, 2)
         .ccx(0, 1, 2);
@@ -283,7 +292,7 @@ declare module '../../common/utils/matrix' {
   }
 }
 
-Matrix.prototype.multiplyVector = function(vector: Complex[]): Complex[] {
+Matrix.prototype.multiplyVector = function (vector: Complex[]): Complex[] {
   const result: Complex[] = [];
   const dim = this.rows;
   for (let i = 0; i < dim; i++) {

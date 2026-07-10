@@ -7,7 +7,6 @@ import { Server, Socket } from 'socket.io';
 
 describe('QuantumVisualizationGateway', () => {
   let gateway: QuantumVisualizationGateway;
-  let observabilityService: ObservabilityService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,7 +19,6 @@ describe('QuantumVisualizationGateway', () => {
     }).compile();
 
     gateway = module.get<QuantumVisualizationGateway>(QuantumVisualizationGateway);
-    observabilityService = module.get<ObservabilityService>(ObservabilityService);
 
     // Mock server for broadcast operations
     const mockServerTo = jest.fn(() => ({ emit: jest.fn() }));

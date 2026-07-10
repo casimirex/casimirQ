@@ -289,11 +289,11 @@ describe('ErrorCorrectionService', () => {
     });
 
     it('should have X and Z stabilizers in Steane code', () => {
-      const xStabilizers = STEANE_CODE.stabilizers.filter(s =>
-        s.operators.some(op => op === 'X')
+      const xStabilizers = STEANE_CODE.stabilizers.filter((s) =>
+        s.operators.some((op) => op === 'X'),
       );
-      const zStabilizers = STEANE_CODE.stabilizers.filter(s =>
-        s.operators.some(op => op === 'Z')
+      const zStabilizers = STEANE_CODE.stabilizers.filter((s) =>
+        s.operators.some((op) => op === 'Z'),
       );
       expect(xStabilizers.length).toBe(3);
       expect(zStabilizers.length).toBe(3);

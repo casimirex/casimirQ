@@ -286,10 +286,7 @@ export class UGate extends SingleQubitGate implements IParametricGate {
 /**
  * Factory for creating gates by name
  */
-export function createGate(
-  type: string,
-  params?: Record<string, number>,
-): ISingleQubitGate {
+export function createGate(type: string, params?: Record<string, number>): ISingleQubitGate {
   switch (type.toLowerCase()) {
     case 'x':
       return new XGate();
@@ -326,7 +323,11 @@ export function createGate(
       if (params?.lambda === undefined) throw new Error('Phase gate requires lambda parameter');
       return new PhaseGate(params.lambda);
     case 'u':
-      if (params?.theta === undefined || params?.phi === undefined || params?.lambda === undefined) {
+      if (
+        params?.theta === undefined ||
+        params?.phi === undefined ||
+        params?.lambda === undefined
+      ) {
         throw new Error('U gate requires theta, phi, and lambda parameters');
       }
       return new UGate(params.theta, params.phi, params.lambda);

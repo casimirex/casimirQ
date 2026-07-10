@@ -1,4 +1,4 @@
-import { Circuit, CircuitBuilder } from '../../circuit-engine/circuit';
+import { Circuit } from '../../circuit-engine/circuit';
 import {
   IQuantumAlgorithm,
   AlgorithmAnalysis,
@@ -74,11 +74,8 @@ export class QuantumTeleportation implements IQuantumAlgorithm {
    */
   buildCircuitWithMessage(messageState: [number, number]): Circuit {
     // Normalize message state
-    const norm = Math.sqrt(
-      messageState[0] * messageState[0] + messageState[1] * messageState[1],
-    );
+    const norm = Math.sqrt(messageState[0] * messageState[0] + messageState[1] * messageState[1]);
     const alpha = messageState[0] / norm;
-    const beta = messageState[1] / norm;
 
     let builder = Circuit.builder(3);
 
@@ -105,7 +102,7 @@ export class QuantumTeleportation implements IQuantumAlgorithm {
   /**
    * Analyze teleportation circuit.
    */
-  analyzeCircuit(circuit: Circuit): AlgorithmAnalysis {
+  analyzeCircuit(_circuit: Circuit): AlgorithmAnalysis {
     return {
       qubitCount: 3,
       gateCount: 7,
@@ -163,14 +160,11 @@ export class QuantumTeleportation implements IQuantumAlgorithm {
     }
 
     // Expected values
-    const norm = Math.sqrt(
-      messageState[0] * messageState[0] + messageState[1] * messageState[1],
-    );
+    const norm = Math.sqrt(messageState[0] * messageState[0] + messageState[1] * messageState[1]);
     const expectedProb0 = (messageState[0] * messageState[0]) / (norm * norm);
     const expectedProb1 = (messageState[1] * messageState[1]) / (norm * norm);
 
-    const fidelity =
-      Math.sqrt(expectedProb0 * probBob0) + Math.sqrt(expectedProb1 * probBob1);
+    const fidelity = Math.sqrt(expectedProb0 * probBob0) + Math.sqrt(expectedProb1 * probBob1);
 
     return {
       measurements: result.statevector,

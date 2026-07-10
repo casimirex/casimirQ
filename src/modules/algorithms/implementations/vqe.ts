@@ -1,4 +1,4 @@
-import { Circuit, CircuitBuilder } from '../../circuit-engine/circuit';
+import { Circuit } from '../../circuit-engine/circuit';
 import {
   IQuantumAlgorithm,
   IParametricCircuit,
@@ -25,8 +25,7 @@ import { SimulationEnginesService } from '../../simulation-engines/simulation-en
  */
 export class VQE implements IQuantumAlgorithm {
   readonly name = 'Variational Quantum Eigensolver';
-  readonly description =
-    'Hybrid quantum-classical algorithm for ground state energy estimation';
+  readonly description = 'Hybrid quantum-classical algorithm for ground state energy estimation';
   readonly category = 'optimization' as const;
   readonly references = [
     'Peruzzo et al., "A variational eigenvalue solver on a quantum processor", Nat Commun 5, 4213 (2014)',
@@ -78,11 +77,7 @@ export class VQE implements IQuantumAlgorithm {
 
     // Calculate expectation value: ⟨ψ|H|ψ⟩ = Σ_i c_i ⟨ψ|P_i|ψ⟩
     for (const term of hamiltonian) {
-      const termExpectation = this.measurePauliString(
-        result.statevector,
-        term.paulis,
-        term.qubits,
-      );
+      const termExpectation = this.measurePauliString(result.statevector, term.paulis, term.qubits);
       expectation += term.coefficient * termExpectation;
     }
 
@@ -106,7 +101,6 @@ export class VQE implements IQuantumAlgorithm {
     // - X, Y: need to change basis
 
     let expectation = 0;
-    const N = BigInt(1) << BigInt(qubits.length);
 
     // Simplified measurement
     // In practice, this would involve basis transformation and measurement
@@ -156,7 +150,7 @@ export class VQE implements IQuantumAlgorithm {
     const numParams = parametricCircuit.getParameters().length;
 
     // Initialize parameters randomly
-    let parameters = Array.from({ length: numParams }, () => Math.random() * 2 * Math.PI);
+    const parameters = Array.from({ length: numParams }, () => Math.random() * 2 * Math.PI);
     const convergenceHistory: number[] = [];
 
     // Simple gradient descent optimizer
@@ -216,11 +210,7 @@ export class VQE implements IQuantumAlgorithm {
   /**
    * Execute VQE to find ground state energy.
    */
-  execute(
-    n: number,
-    hamiltonian: PauliTerm[],
-    maxIterations?: number,
-  ): AlgorithmResult {
+  execute(n: number, hamiltonian: PauliTerm[], maxIterations?: number): AlgorithmResult {
     const startTime = performance.now();
 
     const result = this.optimize(n, hamiltonian, maxIterations);

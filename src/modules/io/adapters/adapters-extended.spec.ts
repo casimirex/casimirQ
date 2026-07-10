@@ -3,6 +3,7 @@ import { QiskitAdapter } from './qiskit-adapter';
 import { CirqAdapter } from './cirq-adapter';
 import { QuilAdapter } from './quil-adapter';
 import { IonQAdapter } from './ionq-adapter';
+import { Circuit } from '../../circuit-engine/circuit';
 
 describe('Format Adapters Extended', () => {
   describe('OpenQASMAdapter Extended', () => {
@@ -75,11 +76,7 @@ qreg q[2]; h q[0]; x q[1];`;
     });
 
     it('should serialize circuit with multiple gates', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
-      const circuit = Circuit.builder(3)
-        .h(0).h(1).h(2)
-        .cx(0, 1).cx(1, 2)
-        .build();
+      const circuit = Circuit.builder(3).h(0).h(1).h(2).cx(0, 1).cx(1, 2).build();
       const output = adapter.serialize(circuit);
       expect(output).toContain('OPENQASM');
       expect(output).toContain('qreg q[3]');
@@ -142,7 +139,6 @@ h q[1];`;
     });
 
     it('should serialize circuit without metadata', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
       const output = adapter.serialize(circuit, { includeMetadata: false });
       const parsed = JSON.parse(output);
@@ -184,9 +180,7 @@ h q[1];`;
         ],
         moments: [
           {
-            operations: [
-              { gate: { name: 'H' }, qubits: [0] },
-            ],
+            operations: [{ gate: { name: 'H' }, qubits: [0] }],
           },
         ],
       });
@@ -208,7 +202,6 @@ h q[1];`;
     });
 
     it('should serialize circuit without metadata', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).build();
       const output = adapter.serialize(circuit, { includeMetadata: false });
       const parsed = JSON.parse(output);
@@ -287,12 +280,7 @@ MEASURE 1 ro[1]`;
     });
 
     it('should serialize circuit with measurements', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
-      const circuit = Circuit.builder(2)
-        .h(0)
-        .measure(0)
-        .measure(1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).measure(0).measure(1).build();
       const output = adapter.serialize(circuit, { includeComments: false });
       expect(output).toContain('DECLARE');
       // Quil adapter generates measurement boilerplate
@@ -338,16 +326,13 @@ H 0`;
         format: 'ionq',
         version: '1.0',
         qubits: 2,
-        gates: [
-          { gate: 'ms', targets: [0, 1], phi: 0, theta: 0.5 },
-        ],
+        gates: [{ gate: 'ms', targets: [0, 1], phi: 0, theta: 0.5 }],
       });
       const circuit = adapter.parse(json);
       expect(circuit.getMetadata().qubitCount).toBe(2);
     });
 
     it('should serialize circuit with IonQ native gates', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
       const output = adapter.serialize(circuit, { useNativeGates: true });
       const parsed = JSON.parse(output);
@@ -355,7 +340,6 @@ H 0`;
     });
 
     it('should serialize without native gates', () => {
-      const { Circuit } = require('../../circuit-engine/circuit');
       const circuit = Circuit.builder(2).h(0).cx(0, 1).build();
       const output = adapter.serialize(circuit, { useNativeGates: false });
       const parsed = JSON.parse(output);
@@ -379,9 +363,7 @@ H 0`;
         format: 'ionq',
         version: '1.0',
         qubits: 2,
-        gates: [
-          { gate: 'h', target: 0, extra: 'prop' },
-        ],
+        gates: [{ gate: 'h', target: 0, extra: 'prop' }],
       });
       const result = adapter.validate(json);
       expect(result.valid).toBe(true);

@@ -5,8 +5,6 @@
  * and QML training algorithms.
  */
 
-import { Complex } from '../../../common/utils/complex';
-
 /**
  * Variational circuit parameters
  */

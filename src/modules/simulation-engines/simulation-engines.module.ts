@@ -23,11 +23,6 @@ import { SimulationEnginesService } from './simulation-engines.service';
     CliffordEngine,
     SimulationEnginesService,
   ],
-  exports: [
-    StatevectorEngine,
-    MPSEngine,
-    CliffordEngine,
-    SimulationEnginesService,
-  ],
+  exports: [StatevectorEngine, MPSEngine, CliffordEngine, SimulationEnginesService],
 })
 export class SimulationEnginesModule {}

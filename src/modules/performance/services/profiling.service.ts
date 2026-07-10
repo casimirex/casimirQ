@@ -5,7 +5,11 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { IExecutionProfile, IPerformanceMetrics, IProfilingConfig } from '../interfaces/performance.interface';
+import {
+  IExecutionProfile,
+  IPerformanceMetrics,
+  IProfilingConfig,
+} from '../interfaces/performance.interface';
 import { Observable, Subject } from 'rxjs';
 
 @Injectable()
@@ -36,7 +40,6 @@ export class ProfilingService {
     }
 
     const id = `${operation}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const startMemory = this.config.profileMemory ? process.memoryUsage().heapUsed : 0;
 
     const profile: IExecutionProfile = {
       operation,
@@ -158,9 +161,13 @@ export class ProfilingService {
    */
   generateReport(): string {
     const metrics = this.getMetrics();
-    const operations = Array.from(new Set(
-      Array.from(this.profiles.values()).flat().map(p => p.operation)
-    ));
+    const operations = Array.from(
+      new Set(
+        Array.from(this.profiles.values())
+          .flat()
+          .map((p) => p.operation),
+      ),
+    );
 
     let report = 'Performance Report\n';
     report += '==================\n\n';
@@ -190,7 +197,7 @@ export class ProfilingService {
     if (allProfiles.length === 0) return 0;
     const timeWindow = 60000;
     const now = Date.now();
-    const recent = allProfiles.filter(p => now - p.startTime < timeWindow);
+    const recent = allProfiles.filter((p) => now - p.startTime < timeWindow);
     return (recent.length / timeWindow) * 1000;
   }
 }

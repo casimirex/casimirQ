@@ -28,8 +28,7 @@ import { QuantumFourierTransform } from './quantum-fourier-transform';
  */
 export class ShorsAlgorithm implements IQuantumAlgorithm {
   readonly name = "Shor's Algorithm";
-  readonly description =
-    'Factors integers in polynomial time using quantum period finding';
+  readonly description = 'Factors integers in polynomial time using quantum period finding';
   readonly category = 'cryptography' as const;
   readonly references = [
     'Shor, "Algorithms for quantum computation: discrete logarithms and factoring", FOCS 1994',
@@ -62,7 +61,6 @@ export class ShorsAlgorithm implements IQuantumAlgorithm {
 
     // Number of qubits needed
     const n = Math.ceil(Math.log2(N)) + 1;
-    const totalQubits = 2 * n + 3; // Space for registers and ancillas
 
     // For demonstration, we'll use a simplified version
     // Full implementation requires modular exponentiation circuit
@@ -100,12 +98,7 @@ export class ShorsAlgorithm implements IQuantumAlgorithm {
   /**
    * Build circuit that verifies the period.
    */
-  private buildPeriodVerificationCircuit(
-    n: number,
-    a: number,
-    r: number,
-    N: number,
-  ): Circuit {
+  private buildPeriodVerificationCircuit(n: number, _a: number, _r: number, _N: number): Circuit {
     // Simplified: create a state that encodes the period
     // In practice, this would be the output of QPE
 
@@ -300,9 +293,7 @@ export class ShorsAlgorithm implements IQuantumAlgorithm {
         test: tc.N,
         expected,
         actual,
-        passed:
-          actual.length === expected.length &&
-          actual.every((v, i) => v === expected[i]),
+        passed: actual.length === expected.length && actual.every((v, i) => v === expected[i]),
       };
     });
   }

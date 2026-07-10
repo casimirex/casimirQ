@@ -28,7 +28,7 @@ describe('ProfilingService', () => {
 
     it('should track operation duration', async () => {
       const id = service.startOperation('slow-op');
-      await new Promise(r => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 50));
       const profile = service.endOperation(id)!;
 
       expect(profile.durationMs).toBeGreaterThanOrEqual(40);
@@ -37,7 +37,7 @@ describe('ProfilingService', () => {
     it('should handle metadata', () => {
       const id = service.startOperation('simulation', {
         numQubits: 5,
-        numGates: 100
+        numGates: 100,
       });
       const profile = service.endOperation(id)!;
 
@@ -106,7 +106,7 @@ describe('ProfilingService', () => {
       service.endOperation(fastId);
 
       const slowId = service.startOperation('slow');
-      await new Promise(r => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 100));
       service.endOperation(slowId);
 
       const slow = service.getSlowOperations(50);

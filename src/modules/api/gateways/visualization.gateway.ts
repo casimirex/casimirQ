@@ -32,9 +32,7 @@ interface CircuitData {
     origin: '*',
   },
 })
-export class VisualizationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class VisualizationGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 

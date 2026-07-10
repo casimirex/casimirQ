@@ -7,13 +7,13 @@ import {
   MessageBody,
   ConnectedSocket,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { Observable } from 'rxjs';
 import { BlochSphereService } from '../services/bloch-sphere.service';
 import { ObservabilityService } from '../services/observability.service';
 import { CircuitDiagramService } from '../services/circuit-diagram.service';
 import { Circuit } from '../../circuit-engine/circuit';
+import { Complex } from '../../../common/utils/complex';
 
 /**
  * Quantum Visualization WebSocket Gateway
@@ -33,9 +33,7 @@ import { Circuit } from '../../circuit-engine/circuit';
   pingInterval: 10000,
   pingTimeout: 5000,
 })
-export class QuantumVisualizationGateway
-  implements OnGatewayConnection, OnGatewayDisconnect
-{
+export class QuantumVisualizationGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
@@ -101,7 +99,9 @@ export class QuantumVisualizationGateway
     this.circuitSessions.get(circuitId)!.add(client.id);
 
     const participants = this.circuitSessions.get(circuitId)!.size;
-    this.logger.log(`Client ${client.id} joined circuit ${circuitId} (${participants} participants)`);
+    this.logger.log(
+      `Client ${client.id} joined circuit ${circuitId} (${participants} participants)`,
+    );
 
     // Notify others
     client.to(roomName).emit('participant-joined', {
@@ -149,9 +149,13 @@ export class QuantumVisualizationGateway
    */
   @SubscribeMessage('get-bloch-sphere')
   handleGetBlochSphere(
-    @MessageBody() data: { qubitIndex: number; alpha: { re: number; im: number }; beta: { re: number; im: number } },
+    @MessageBody()
+    data: {
+      qubitIndex: number;
+      alpha: { re: number; im: number };
+      beta: { re: number; im: number };
+    },
   ): { data: unknown } {
-    const { Complex } = require('../../../common/utils/complex');
     const alpha = new Complex(data.alpha.re, data.alpha.im);
     const beta = new Complex(data.beta.re, data.beta.im);
 
@@ -228,10 +232,10 @@ export class QuantumVisualizationGateway
    * Request circuit diagram
    */
   @SubscribeMessage('get-circuit-diagram')
-  handleGetCircuitDiagram(
-    @MessageBody() data: { circuit: unknown },
-  ): { svg: string; json: unknown } {
-    const Circuit = require('../../circuit-engine/circuit').Circuit;
+  handleGetCircuitDiagram(@MessageBody() data: { circuit: unknown }): {
+    svg: string;
+    json: unknown;
+  } {
     const circuit = data.circuit as Circuit;
 
     const svg = this.circuitDiagramService.generateSVG(circuit);

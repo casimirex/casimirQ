@@ -87,7 +87,7 @@ export class StatevectorEngine implements ISimulationEngine {
     };
   }
 
-  private initializeState(numQubits: number): SparseStatevector {
+  private initializeState(_numQubits: number): SparseStatevector {
     return new Map<bigint, Complex>([[BigInt(0), new Complex(1, 0)]]);
   }
 
@@ -212,7 +212,7 @@ export class StatevectorEngine implements ISimulationEngine {
 
     for (const [idx, amp] of state.entries()) {
       // Check if all controls are |1⟩
-      const allActive = controls.every(c => ((idx >> BigInt(c)) & BigInt(1)) === BigInt(1));
+      const allActive = controls.every((c) => ((idx >> BigInt(c)) & BigInt(1)) === BigInt(1));
 
       if (!allActive) {
         newState.set(idx, amp);
