@@ -10,7 +10,7 @@
  *   PGSSL=true    enable TLS (e.g. for managed databases)
  */
 
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import {
@@ -33,11 +33,7 @@ interface CircuitRow extends QueryResultRow {
 }
 
 @Injectable()
-export class PostgresCircuitsRepository
-  extends CircuitsRepository
-  implements OnModuleInit, OnModuleDestroy
-{
-  private readonly logger = new Logger(PostgresCircuitsRepository.name);
+export class PostgresCircuitsRepository extends CircuitsRepository implements OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor() {
@@ -46,25 +42,6 @@ export class PostgresCircuitsRepository
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
     });
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS circuits (
-        id          TEXT PRIMARY KEY,
-        user_id     TEXT NOT NULL,
-        name        TEXT NOT NULL,
-        num_qubits  INTEGER NOT NULL,
-        operations  JSONB NOT NULL DEFAULT '[]'::jsonb,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_circuits_user_created
-        ON circuits (user_id, created_at DESC, id DESC);
-    `);
-    this.logger.log('Circuits table ready');
   }
 
   async onModuleDestroy(): Promise<void> {

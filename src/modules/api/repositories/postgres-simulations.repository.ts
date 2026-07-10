@@ -6,7 +6,7 @@
  * Reuses DATABASE_URL / PGSSL configuration.
  */
 
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Pool, type QueryResultRow } from 'pg';
 import {
@@ -35,9 +35,8 @@ interface SimulationRow extends QueryResultRow {
 @Injectable()
 export class PostgresSimulationsRepository
   extends SimulationsRepository
-  implements OnModuleInit, OnModuleDestroy
+  implements OnModuleDestroy
 {
-  private readonly logger = new Logger(PostgresSimulationsRepository.name);
   private readonly pool: Pool;
 
   constructor() {
@@ -46,29 +45,6 @@ export class PostgresSimulationsRepository
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
     });
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS simulations (
-        id                TEXT PRIMARY KEY,
-        user_id           TEXT NOT NULL,
-        circuit_id        TEXT,
-        circuit_name      TEXT NOT NULL,
-        engine            TEXT NOT NULL,
-        shots             INTEGER NOT NULL,
-        num_qubits        INTEGER NOT NULL,
-        status            TEXT NOT NULL,
-        results           JSONB NOT NULL DEFAULT '{}'::jsonb,
-        execution_time_ms DOUBLE PRECISION NOT NULL DEFAULT 0,
-        created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_simulations_user_created
-        ON simulations (user_id, created_at DESC, id DESC);
-    `);
-    this.logger.log('Simulations table ready');
   }
 
   async onModuleDestroy(): Promise<void> {

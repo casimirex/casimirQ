@@ -15,10 +15,10 @@ const describeIfDb = url ? describe : describe.skip;
 describeIfDb('PostgresCircuitsRepository (integration)', () => {
   let repo: PostgresCircuitsRepository;
 
-  beforeAll(async () => {
+  beforeAll(() => {
+    // The schema is applied by the jest global setup (migrations).
     process.env.DATABASE_URL = url;
     repo = new PostgresCircuitsRepository();
-    await repo.onModuleInit();
   });
 
   afterAll(async () => {

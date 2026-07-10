@@ -13,6 +13,17 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-shot: apply DB migrations, then exit. Backend waits for this to finish.
+  migrate:
+    build:
+      context: .
+    command: npm run migrate
+    environment:
+      DATABASE_URL: postgres://casimir:casimir@postgres:5432/casimirq
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build:
       context: .
@@ -23,6 +34,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - '3000:3000'
 
