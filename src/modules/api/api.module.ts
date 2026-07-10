@@ -13,6 +13,7 @@ import { JobsController } from './controllers/jobs.controller';
 import { SimulationController } from './controllers/simulation.controller';
 import { VisualizationController } from './controllers/visualization.controller';
 import { AdvancedFeaturesController } from './controllers/advanced-features.controller';
+import { AdvancedOrchestrationController } from './controllers/advanced-orchestration.controller';
 import { AuthController } from './controllers/auth.controller';
 
 // Services
@@ -29,6 +30,9 @@ import { PostgresSimulationsRepository } from './repositories/postgres-simulatio
 import { UsersRepository } from './repositories/users.repository';
 import { InMemoryUsersRepository } from './repositories/in-memory-users.repository';
 import { PostgresUsersRepository } from './repositories/postgres-users.repository';
+import { BatchesRepository } from './repositories/batches.repository';
+import { InMemoryBatchesRepository } from './repositories/in-memory-batches.repository';
+import { PostgresBatchesRepository } from './repositories/postgres-batches.repository';
 
 // Guards
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -43,6 +47,7 @@ import {
   NoiseModelingService,
   QuantumMLService,
 } from '../advanced-features/services';
+import { CircuitOptimizerService } from '../performance/services/circuit-optimizer.service';
 
 // Import SimulationEnginesModule for dependency injection
 import { SimulationEnginesModule } from '../simulation-engines/simulation-engines.module';
@@ -69,6 +74,7 @@ import { JobsGateway } from './gateways/jobs.gateway';
     SimulationController,
     VisualizationController,
     AdvancedFeaturesController,
+    AdvancedOrchestrationController,
   ],
   providers: [
     AuthService,
@@ -89,6 +95,10 @@ import { JobsGateway } from './gateways/jobs.gateway';
       provide: UsersRepository,
       useClass: process.env.DATABASE_URL ? PostgresUsersRepository : InMemoryUsersRepository,
     },
+    {
+      provide: BatchesRepository,
+      useClass: process.env.DATABASE_URL ? PostgresBatchesRepository : InMemoryBatchesRepository,
+    },
     JwtAuthGuard,
     RateLimitGuard,
     VisualizationGateway,
@@ -98,6 +108,7 @@ import { JobsGateway } from './gateways/jobs.gateway';
     ErrorCorrectionService,
     NoiseModelingService,
     QuantumMLService,
+    CircuitOptimizerService,
   ],
   exports: [AuthService, JwtAuthGuard, RateLimitGuard, VisualizationGateway, JobsGateway],
 })
