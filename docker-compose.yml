@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: casimir
+      POSTGRES_PASSWORD: casimir
+      POSTGRES_DB: casimirq
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U casimir -d casimirq']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+    environment:
+      DATABASE_URL: postgres://casimir:casimir@postgres:5432/casimirq
+      JWT_SECRET: ${JWT_SECRET:-dev-only-insecure-secret-change-me}
+      PORT: '3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - '8080:80'
+
+volumes:
+  pgdata:
