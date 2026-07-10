@@ -34,6 +34,9 @@ import { PostgresUsersRepository } from './repositories/postgres-users.repositor
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 
+// Visualization services (dependency-free) used by the API layer
+import { CircuitDiagramService } from '../visualization/services/circuit-diagram.service';
+
 // Import SimulationEnginesModule for dependency injection
 import { SimulationEnginesModule } from '../simulation-engines/simulation-engines.module';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
@@ -84,6 +87,7 @@ import { JobsGateway } from './gateways/jobs.gateway';
     VisualizationGateway,
     JobsGateway,
     SimulationEnginesService,
+    CircuitDiagramService,
   ],
   exports: [AuthService, JwtAuthGuard, RateLimitGuard, VisualizationGateway, JobsGateway],
 })
