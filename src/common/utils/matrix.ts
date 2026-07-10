@@ -35,21 +35,21 @@ export class Matrix {
     }
 
     // Deep copy the data to ensure immutability
-    this.data = data.map(row => [...row]);
+    this.data = data.map((row) => [...row]);
   }
 
   /**
    * Create a matrix from real number array
    */
   static fromReal(data: number[][]): Matrix {
-    return new Matrix(data.map(row => row.map(val => new Complex(val, 0))));
+    return new Matrix(data.map((row) => row.map((val) => new Complex(val, 0))));
   }
 
   /**
    * Create a matrix from complex number tuples [real, imag]
    */
   static fromTuples(data: [number, number][][]): Matrix {
-    return new Matrix(data.map(row => row.map(([r, i]) => new Complex(r, i))));
+    return new Matrix(data.map((row) => row.map(([r, i]) => new Complex(r, i))));
   }
 
   /**
@@ -116,7 +116,7 @@ export class Matrix {
     if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) {
       throw new Error('Index out of bounds');
     }
-    const newData = this.data.map(r => [...r]);
+    const newData = this.data.map((r) => [...r]);
     newData[row][col] = value;
     return new Matrix(newData);
   }
@@ -232,8 +232,6 @@ export class Matrix {
    * Essential for multi-qubit gate construction
    */
   tensor(other: Matrix): Matrix {
-    const newRows = this.rows * other.rows;
-    const newCols = this.cols * other.cols;
     const data: Complex[][] = [];
 
     for (let i = 0; i < this.rows; i++) {
@@ -364,9 +362,7 @@ export class Matrix {
    * String representation
    */
   toString(): string {
-    const rows = this.data.map(row =>
-      row.map(c => `(${c.toString()})`).join(' ')
-    );
+    const rows = this.data.map((row) => row.map((c) => `(${c.toString()})`).join(' '));
     return '[' + rows.join('\n ') + ']';
   }
 
@@ -374,7 +370,7 @@ export class Matrix {
    * Get raw data (shallow copy of rows)
    */
   toArray(): Complex[][] {
-    return this.data.map(row => [...row]);
+    return this.data.map((row) => [...row]);
   }
 }
 

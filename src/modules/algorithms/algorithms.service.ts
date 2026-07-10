@@ -39,8 +39,7 @@ export class AlgorithmsService {
     return [
       {
         name: 'Quantum Fourier Transform',
-        description:
-          'Transforms quantum state to Fourier basis using O(n²) gates',
+        description: 'Transforms quantum state to Fourier basis using O(n²) gates',
         category: 'fundamental',
         factory: () => new QuantumFourierTransform(this.enginesService),
       },
@@ -104,11 +103,7 @@ export class AlgorithmsService {
   /**
    * Execute QAOA for MaxCut.
    */
-  executeQAOA(
-    n: number,
-    edges: [number, number][],
-    p = 1,
-  ): AlgorithmResult {
+  executeQAOA(n: number, edges: [number, number][], p = 1): AlgorithmResult {
     const algorithm = new QAOA(this.enginesService);
     return algorithm.execute(n, edges, p);
   }

@@ -122,12 +122,7 @@ export class IOService {
    * @param options Conversion options
    * @returns Converted data
    */
-  convert(
-    data: string,
-    fromFormat: string,
-    toFormat: string,
-    options?: IOOptions,
-  ): string {
+  convert(data: string, fromFormat: string, toFormat: string, options?: IOOptions): string {
     // Parse from source format
     const circuit = this.import(fromFormat, data);
 

@@ -1,6 +1,5 @@
 import { StatevectorEngine } from './statevector-engine';
 import { Circuit } from '../../../circuit-engine/circuit';
-import { Complex } from '../../../../common/utils/complex';
 import { ISimulationOptions } from '../../interfaces/simulation-engine.interface';
 
 describe('StatevectorEngine', () => {
@@ -70,7 +69,7 @@ describe('StatevectorEngine', () => {
       expect(result).toBeDefined();
       // Check SWAP was applied (some amplitude should be non-zero)
       const hasNonZeroAmp = Array.from(result.statevector.values()).some(
-        (c) => c.magnitude() > 0.9
+        (c) => c.magnitude() > 0.9,
       );
       expect(hasNonZeroAmp).toBe(true);
     });
@@ -87,19 +86,25 @@ describe('StatevectorEngine', () => {
 
   describe('Rotation Gates', () => {
     it('should execute RX gate', async () => {
-      const circuit = Circuit.builder(1).rx(0, Math.PI / 2).build();
+      const circuit = Circuit.builder(1)
+        .rx(0, Math.PI / 2)
+        .build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should execute RY gate', async () => {
-      const circuit = Circuit.builder(1).ry(0, Math.PI / 2).build();
+      const circuit = Circuit.builder(1)
+        .ry(0, Math.PI / 2)
+        .build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should execute RZ gate', async () => {
-      const circuit = Circuit.builder(1).rz(0, Math.PI / 2).build();
+      const circuit = Circuit.builder(1)
+        .rz(0, Math.PI / 2)
+        .build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
@@ -157,11 +162,7 @@ describe('StatevectorEngine', () => {
     });
 
     it('should execute multi-layer circuit', async () => {
-      const circuit = Circuit.builder(2)
-        .h(0).h(1)
-        .cx(0, 1)
-        .h(0).h(1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).h(1).cx(0, 1).h(0).h(1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });

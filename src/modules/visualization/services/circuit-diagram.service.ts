@@ -128,10 +128,7 @@ export class CircuitDiagramService {
   } {
     const type = operation.gate.type.toLowerCase();
 
-    const gateMap: Record<
-      string,
-      { symbol: string; color: string; needsBox: boolean }
-    > = {
+    const gateMap: Record<string, { symbol: string; color: string; needsBox: boolean }> = {
       h: { symbol: 'H', color: '#4CAF50', needsBox: true },
       x: { symbol: 'X', color: '#f44336', needsBox: true },
       y: { symbol: 'Y', color: '#FF9800', needsBox: true },
@@ -154,9 +151,7 @@ export class CircuitDiagramService {
       cp: { symbol: 'P', color: '#673AB7', needsBox: true },
     };
 
-    return (
-      gateMap[type] || { symbol: type.toUpperCase(), color: '#757575', needsBox: true }
-    );
+    return gateMap[type] || { symbol: type.toUpperCase(), color: '#757575', needsBox: true };
   }
 
   /**
@@ -227,13 +222,12 @@ export class CircuitDiagramService {
   generateExecutionAnimation(
     circuit: Circuit,
     currentStep: number,
-    totalSteps: number,
+    _totalSteps: number,
   ): ICircuitDiagram {
     const diagram = this.generateDiagram(circuit);
 
     // Highlight current gate
     if (currentStep < diagram.gates.length) {
-      const currentGate = diagram.gates[currentStep];
       // Add highlight effect (this would be handled by the frontend)
     }
 

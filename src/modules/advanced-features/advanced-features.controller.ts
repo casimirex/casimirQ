@@ -5,16 +5,7 @@
  * quantum machine learning, and multi-circuit execution.
  */
 
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ErrorCorrectionService } from './services/error-correction.service';
 import { NoiseModelingService } from './services/noise-modeling.service';
 import { QuantumMLService } from './services/quantum-ml.service';
@@ -67,9 +58,7 @@ export class AdvancedFeaturesController {
    */
   @Post('error-correction/encode')
   @HttpCode(HttpStatus.OK)
-  async encodeWithQEC(
-    @Body() body: { logicalState: number[]; codeName: string; options?: any },
-  ) {
+  async encodeWithQEC(@Body() body: { logicalState: number[]; codeName: string; options?: any }) {
     try {
       const result = this.errorCorrectionService.simulateQEC(
         body.logicalState,
@@ -145,9 +134,7 @@ export class AdvancedFeaturesController {
    */
   @Post('qml/kernel')
   @HttpCode(HttpStatus.OK)
-  computeKernel(
-    @Body() body: { X: number[][]; featureMap: string },
-  ) {
+  computeKernel(@Body() body: { X: number[][]; featureMap: string }) {
     const featureMap = this.qmlService.getFeatureMap(body.featureMap);
     if (!featureMap) {
       return { error: `Feature map ${body.featureMap} not found` };
@@ -196,10 +183,7 @@ export class AdvancedFeaturesController {
       config: any;
     },
   ) {
-    const result = await this.qmlService.trainQuantumClassifier(
-      body.data,
-      body.config,
-    );
+    const result = await this.qmlService.trainQuantumClassifier(body.data, body.config);
     return result;
   }
 
@@ -215,10 +199,7 @@ export class AdvancedFeaturesController {
       options: any;
     },
   ) {
-    const result = await this.executionService.executeBatch(
-      body.circuits,
-      body.options,
-    );
+    const result = await this.executionService.executeBatch(body.circuits, body.options);
     return result;
   }
 
@@ -234,10 +215,7 @@ export class AdvancedFeaturesController {
       input: any;
     },
   ) {
-    const result = await this.executionService.executePipeline(
-      body.pipeline,
-      body.input,
-    );
+    const result = await this.executionService.executePipeline(body.pipeline, body.input);
     return result;
   }
 

@@ -89,7 +89,12 @@ export class CpGate implements ITwoQubitGate {
       [new Complex(1, 0), new Complex(0, 0), new Complex(0, 0), new Complex(0, 0)],
       [new Complex(0, 0), new Complex(1, 0), new Complex(0, 0), new Complex(0, 0)],
       [new Complex(0, 0), new Complex(0, 0), new Complex(1, 0), new Complex(0, 0)],
-      [new Complex(0, 0), new Complex(0, 0), new Complex(0, 0), new Complex(Math.cos(lambda), Math.sin(lambda))],
+      [
+        new Complex(0, 0),
+        new Complex(0, 0),
+        new Complex(0, 0),
+        new Complex(Math.cos(lambda), Math.sin(lambda)),
+      ],
     ]);
   }
 
@@ -159,8 +164,18 @@ export class ChGate implements ITwoQubitGate {
   readonly matrix = new Matrix([
     [new Complex(1, 0), new Complex(0, 0), new Complex(0, 0), new Complex(0, 0)],
     [new Complex(0, 0), new Complex(1, 0), new Complex(0, 0), new Complex(0, 0)],
-    [new Complex(0, 0), new Complex(0, 0), new Complex(1 / Math.sqrt(2), 0), new Complex(1 / Math.sqrt(2), 0)],
-    [new Complex(0, 0), new Complex(0, 0), new Complex(1 / Math.sqrt(2), 0), new Complex(-1 / Math.sqrt(2), 0)],
+    [
+      new Complex(0, 0),
+      new Complex(0, 0),
+      new Complex(1 / Math.sqrt(2), 0),
+      new Complex(1 / Math.sqrt(2), 0),
+    ],
+    [
+      new Complex(0, 0),
+      new Complex(0, 0),
+      new Complex(1 / Math.sqrt(2), 0),
+      new Complex(-1 / Math.sqrt(2), 0),
+    ],
   ]);
 
   isUnitary(): boolean {

@@ -8,6 +8,7 @@ import {
 } from './multi-qubit-gates';
 import { Matrix } from '../../../common/utils/matrix';
 import { Complex } from '../../../common/utils/complex';
+import { HGate } from './single-qubit-gates';
 
 describe('Multi-Qubit Gates', () => {
   describe('CnotGate', () => {
@@ -25,7 +26,7 @@ describe('Multi-Qubit Gates', () => {
       const input = [new Complex(0, 0), new Complex(0, 0), new Complex(0, 0), new Complex(1, 0)];
       const result = gate.matrix.multiplyVector(input);
       expect(result[3].real).toBeCloseTo(0); // |11⟩
-      expect(result[2].real).toBeCloseTo(1);  // |10⟩
+      expect(result[2].real).toBeCloseTo(1); // |10⟩
     });
 
     it('should leave target unchanged when control is |0⟩', () => {
@@ -119,7 +120,6 @@ describe('Multi-Qubit Gates', () => {
 
     it('should equal two CNOTs with alternating control/target', () => {
       const swap = new SwapGate();
-      const cnot1 = new CnotGate();
       // SWAP = CNOT(control=q0, target=q1) → CNOT(control=q1, target=q0) → CNOT(control=q0, target=q1)
       // This is a simplified check
       expect(swap.matrix.rows).toBe(4);
@@ -139,7 +139,9 @@ describe('Multi-Qubit Gates', () => {
       const gate = new ToffoliGate();
       // |110⟩ (controls 1,1 target 0) should become |111⟩
       const dim = 8;
-      const input = Array(dim).fill(null).map(() => new Complex(0, 0));
+      const input = Array(dim)
+        .fill(null)
+        .map(() => new Complex(0, 0));
       input[6] = new Complex(1, 0); // |110⟩ = 6
       const result = gate.matrix.multiplyVector(input);
       expect(result[6].real).toBeCloseTo(0);
@@ -150,7 +152,9 @@ describe('Multi-Qubit Gates', () => {
       const gate = new ToffoliGate();
       // |100⟩ should stay |100⟩
       const dim = 8;
-      const input = Array(dim).fill(null).map(() => new Complex(0, 0));
+      const input = Array(dim)
+        .fill(null)
+        .map(() => new Complex(0, 0));
       input[4] = new Complex(1, 0); // |100⟩ = 4
       const result = gate.matrix.multiplyVector(input);
       expect(result[4].real).toBeCloseTo(1);
@@ -176,7 +180,9 @@ describe('Multi-Qubit Gates', () => {
       const gate = new FredkinGate();
       // |101⟩ (control=1, targets 0,1) should become |110⟩
       const dim = 8;
-      const input = Array(dim).fill(null).map(() => new Complex(0, 0));
+      const input = Array(dim)
+        .fill(null)
+        .map(() => new Complex(0, 0));
       input[5] = new Complex(1, 0); // |101⟩
       const result = gate.matrix.multiplyVector(input);
       expect(result[5].real).toBeCloseTo(0);
@@ -187,7 +193,9 @@ describe('Multi-Qubit Gates', () => {
       const gate = new FredkinGate();
       // |001⟩ should stay |001⟩
       const dim = 8;
-      const input = Array(dim).fill(null).map(() => new Complex(0, 0));
+      const input = Array(dim)
+        .fill(null)
+        .map(() => new Complex(0, 0));
       input[1] = new Complex(1, 0); // |001⟩
       const result = gate.matrix.multiplyVector(input);
       expect(result[1].real).toBeCloseTo(1);
@@ -230,12 +238,10 @@ describe('Multi-Qubit Gates', () => {
 
   describe('Bell State Creation', () => {
     it('should create Bell state with Hadamard + CNOT', () => {
-      const { HGate } = require('./single-qubit-gates');
       const h = new HGate();
       const cnot = new CnotGate();
 
       // H⊗I |00⟩ = |+0⟩
-      const dim = 4;
       const input = [new Complex(1, 0), new Complex(0, 0), new Complex(0, 0), new Complex(0, 0)];
 
       // Apply H to first qubit

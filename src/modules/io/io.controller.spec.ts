@@ -4,7 +4,6 @@ import { IOService } from './io.service';
 
 describe('IOController', () => {
   let controller: IOController;
-  let service: IOService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -13,7 +12,6 @@ describe('IOController', () => {
     }).compile();
 
     controller = module.get<IOController>(IOController);
-    service = module.get<IOService>(IOService);
   });
 
   it('should be defined', () => {

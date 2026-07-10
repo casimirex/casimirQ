@@ -1,9 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  IQubitState,
-  IBlochSphereData,
-  IAnimationConfig,
-} from '../interfaces/visualization.interface';
+import { IQubitState, IBlochSphereData } from '../interfaces/visualization.interface';
 import { Complex } from '../../../common/utils/complex';
 
 /**
@@ -23,15 +19,11 @@ export class BlochSphereService {
   /**
    * Convert complex amplitudes to Bloch sphere coordinates
    */
-  amplitudesToBloch(
-    alpha: Complex,
-    beta: Complex,
-  ): { theta: number; phi: number } {
+  amplitudesToBloch(alpha: Complex, beta: Complex): { theta: number; phi: number } {
     // Calculate Bloch angles from amplitudes
     // |ψ⟩ = α|0⟩ + β|1⟩ where |α|² + |β|² = 1
 
     const alphaMag = alpha.magnitude();
-    const betaMag = beta.magnitude();
 
     // theta = 2 * arccos(|α|)
     const theta = 2 * Math.acos(Math.min(1, Math.max(0, alphaMag)));
@@ -123,11 +115,7 @@ export class BlochSphereService {
 
       if (Math.abs(theta) < 0.001) {
         // Equator
-        points.push([
-          radius * Math.cos(phi),
-          radius * Math.sin(phi),
-          0,
-        ]);
+        points.push([radius * Math.cos(phi), radius * Math.sin(phi), 0]);
       } else {
         // Tilted circle
         points.push([
@@ -144,14 +132,9 @@ export class BlochSphereService {
   /**
    * Calculate intermediate state for animation
    */
-  interpolateState(
-    from: IQubitState,
-    to: IQubitState,
-    progress: number,
-  ): IQubitState {
+  interpolateState(from: IQubitState, to: IQubitState, progress: number): IQubitState {
     // Interpolate Bloch angles
-    const theta =
-      from.bloch.theta + (to.bloch.theta - from.bloch.theta) * progress;
+    const theta = from.bloch.theta + (to.bloch.theta - from.bloch.theta) * progress;
     const phi = from.bloch.phi + (to.bloch.phi - from.bloch.phi) * progress;
 
     // Convert back to amplitudes
@@ -177,20 +160,14 @@ export class BlochSphereService {
   /**
    * Generate animation frames for state transition
    */
-  generateAnimationFrames(
-    from: IQubitState,
-    to: IQubitState,
-    frames: number,
-  ): IQubitState[] {
+  generateAnimationFrames(from: IQubitState, to: IQubitState, frames: number): IQubitState[] {
     const states: IQubitState[] = [];
 
     for (let i = 0; i <= frames; i++) {
       const progress = i / frames;
       // Apply easing (ease-in-out)
       const easedProgress =
-        progress < 0.5
-          ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+        progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
       states.push(this.interpolateState(from, to, easedProgress));
     }
 
@@ -201,11 +178,7 @@ export class BlochSphereService {
    * Generate measurement collapse animation
    * Animates from superposition to |0⟩ or |1⟩
    */
-  generateCollapseAnimation(
-    from: IQubitState,
-    outcome: 0 | 1,
-    frames: number = 30,
-  ): IQubitState[] {
+  generateCollapseAnimation(from: IQubitState, outcome: 0 | 1, frames: number = 30): IQubitState[] {
     const targetTheta = outcome === 0 ? 0 : Math.PI;
     const targetState: IQubitState = {
       bloch: { theta: targetTheta, phi: 0 },

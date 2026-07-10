@@ -26,8 +26,14 @@ describe('Matrix', () => {
 
     it('should create from tuples', () => {
       const matrix = Matrix.fromTuples([
-        [[1, 2], [3, 4]],
-        [[5, 6], [7, 8]],
+        [
+          [1, 2],
+          [3, 4],
+        ],
+        [
+          [5, 6],
+          [7, 8],
+        ],
       ]);
       expect(matrix.get(0, 0).real).toBe(1);
       expect(matrix.get(0, 0).imag).toBe(2);
@@ -40,10 +46,7 @@ describe('Matrix', () => {
     });
 
     it('should throw on inconsistent row lengths', () => {
-      const data = [
-        [new Complex(1, 0), new Complex(0, 1)],
-        [new Complex(0, 0)],
-      ];
+      const data = [[new Complex(1, 0), new Complex(0, 1)], [new Complex(0, 0)]];
       expect(() => new Matrix(data)).toThrow('All rows must have the same number of columns');
     });
   });
@@ -144,8 +147,14 @@ describe('Matrix', () => {
     });
 
     it('should be immutable', () => {
-      const a = Matrix.fromReal([[1, 2], [3, 4]]);
-      const b = Matrix.fromReal([[1, 1], [1, 1]]);
+      const a = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
+      const b = Matrix.fromReal([
+        [1, 1],
+        [1, 1],
+      ]);
       a.add(b);
       expect(a.get(0, 0).real).toBe(1);
     });
@@ -273,10 +282,22 @@ describe('Matrix', () => {
     });
 
     it('should verify (A⊗B)(C⊗D) = (AC)⊗(BD)', () => {
-      const A = Matrix.fromReal([[1, 2], [3, 4]]);
-      const B = Matrix.fromReal([[0, 1], [1, 0]]); // X gate
-      const C = Matrix.fromReal([[2, 0], [0, 2]]);
-      const D = Matrix.fromReal([[1, 1], [1, -1]]);
+      const A = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
+      const B = Matrix.fromReal([
+        [0, 1],
+        [1, 0],
+      ]); // X gate
+      const C = Matrix.fromReal([
+        [2, 0],
+        [0, 2],
+      ]);
+      const D = Matrix.fromReal([
+        [1, 1],
+        [1, -1],
+      ]);
 
       const left = A.tensor(B).multiply(C.tensor(D));
       const right = A.multiply(C).tensor(B.multiply(D));
@@ -313,8 +334,15 @@ describe('Matrix', () => {
     });
 
     it('should verify (AB)^T = B^T A^T', () => {
-      const A = Matrix.fromReal([[1, 2], [3, 4], [5, 6]]);
-      const B = Matrix.fromReal([[1, 2, 3], [4, 5, 6]]);
+      const A = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+        [5, 6],
+      ]);
+      const B = Matrix.fromReal([
+        [1, 2, 3],
+        [4, 5, 6],
+      ]);
       const left = A.multiply(B).transpose();
       const right = B.transpose().multiply(A.transpose());
       expect(left.approximatelyEquals(right)).toBe(true);
@@ -373,8 +401,14 @@ describe('Matrix', () => {
     });
 
     it('should verify trace(AB) = trace(BA)', () => {
-      const A = Matrix.fromReal([[1, 2], [3, 4]]);
-      const B = Matrix.fromReal([[5, 6], [7, 8]]);
+      const A = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
+      const B = Matrix.fromReal([
+        [5, 6],
+        [7, 8],
+      ]);
       const traceAB = A.multiply(B).trace();
       const traceBA = B.multiply(A).trace();
       expect(traceAB.real).toBe(traceBA.real);
@@ -402,15 +436,27 @@ describe('Matrix', () => {
 
   describe('Equality', () => {
     it('should check exact equality', () => {
-      const a = Matrix.fromReal([[1, 2], [3, 4]]);
-      const b = Matrix.fromReal([[1, 2], [3, 4]]);
-      const c = Matrix.fromReal([[1, 2], [3, 5]]);
+      const a = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
+      const b = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
+      const c = Matrix.fromReal([
+        [1, 2],
+        [3, 5],
+      ]);
       expect(a.equals(b)).toBe(true);
       expect(a.equals(c)).toBe(false);
     });
 
     it('should check approximate equality', () => {
-      const a = Matrix.fromReal([[1, 2], [3, 4]]);
+      const a = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
       const b = new Matrix([
         [new Complex(1.0000000001, 0), new Complex(2, 0)],
         [new Complex(3, 0), new Complex(4, 0)],
@@ -429,7 +475,10 @@ describe('Matrix', () => {
 
   describe('Matrix Power', () => {
     it('should compute matrix power', () => {
-      const m = Matrix.fromReal([[0, 1], [1, 0]]); // X gate
+      const m = Matrix.fromReal([
+        [0, 1],
+        [1, 0],
+      ]); // X gate
       const m2 = matrixPower(m, 2);
       expect(m2.isUnitary()).toBe(true);
       // X^2 = I
@@ -437,13 +486,19 @@ describe('Matrix', () => {
     });
 
     it('should return identity for power 0', () => {
-      const m = Matrix.fromReal([[2, 0], [0, 2]]);
+      const m = Matrix.fromReal([
+        [2, 0],
+        [0, 2],
+      ]);
       const result = matrixPower(m, 0);
       expect(result.equals(Matrix.identity(2))).toBe(true);
     });
 
     it('should return same matrix for power 1', () => {
-      const m = Matrix.fromReal([[1, 2], [3, 4]]);
+      const m = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
       const result = matrixPower(m, 1);
       expect(result.equals(m)).toBe(true);
     });
@@ -461,7 +516,10 @@ describe('Matrix', () => {
 
   describe('Controlled Gate', () => {
     it('should create controlled gate', () => {
-      const x = Matrix.fromReal([[0, 1], [1, 0]]);
+      const x = Matrix.fromReal([
+        [0, 1],
+        [1, 0],
+      ]);
       const cnot = controlledGate(2, x); // 2x2 control space
       expect(cnot.rows).toBe(4);
       expect(cnot.cols).toBe(4);
@@ -473,7 +531,10 @@ describe('Matrix', () => {
     });
 
     it('should apply identity to control subspace', () => {
-      const gate = Matrix.fromReal([[1, 2], [3, 4]]);
+      const gate = Matrix.fromReal([
+        [1, 2],
+        [3, 4],
+      ]);
       const controlled = controlledGate(2, gate);
       // Top-left 2x2 should be identity
       expect(controlled.get(0, 0).real).toBe(1);

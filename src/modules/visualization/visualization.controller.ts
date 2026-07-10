@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  Res,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Res, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { VisualizationService } from './visualization.service';
 import { Circuit } from '../circuit-engine/circuit';
@@ -68,11 +58,7 @@ export class VisualizationController {
     const alpha = new Complex(dto.alpha.re, dto.alpha.im);
     const beta = new Complex(dto.beta.re, dto.beta.im);
 
-    const blochData = this.visualizationService.generateBlochSphere(
-      alpha,
-      beta,
-      dto.radius,
-    );
+    const blochData = this.visualizationService.generateBlochSphere(alpha, beta, dto.radius);
 
     return {
       type: 'bloch-sphere',

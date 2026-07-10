@@ -36,9 +36,7 @@ export class MultiCircuitExecutionService {
     const failed: string[] = [];
 
     // Sort by priority (higher first)
-    const sortedCircuits = [...circuits].sort(
-      (a, b) => (b.priority ?? 0) - (a.priority ?? 0),
-    );
+    const sortedCircuits = [...circuits].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
 
     // Handle dependencies
     const completed = new Set<string>();
@@ -122,9 +120,7 @@ export class MultiCircuitExecutionService {
 
       // Check dependencies
       if (entry.dependencies && entry.dependencies.length > 0) {
-        const depsSatisfied = entry.dependencies.every((dep) =>
-          completed.has(dep),
-        );
+        const depsSatisfied = entry.dependencies.every((dep) => completed.has(dep));
         if (!depsSatisfied) {
           continue; // Skip for now, will retry
         }
@@ -190,9 +186,7 @@ export class MultiCircuitExecutionService {
 
       // Check dependencies
       if (entry.dependencies && entry.dependencies.length > 0) {
-        const depsSatisfied = entry.dependencies.every((dep) =>
-          completed.has(dep),
-        );
+        const depsSatisfied = entry.dependencies.every((dep) => completed.has(dep));
         if (!depsSatisfied) {
           continue;
         }
@@ -427,9 +421,7 @@ export class MultiCircuitExecutionService {
   /**
    * Execute a distributed task
    */
-  private async executeDistributedTask(
-    task: IDistributedTask,
-  ): Promise<ISimulationResult> {
+  private async executeDistributedTask(task: IDistributedTask): Promise<ISimulationResult> {
     // Simulate remote execution
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -503,10 +495,7 @@ export class MultiCircuitExecutionService {
   /**
    * Collect metrics from output
    */
-  private collectMetrics(
-    output: Circuit | Circuit[],
-    stageName: string,
-  ): Record<string, number> {
+  private collectMetrics(output: Circuit | Circuit[], _stageName: string): Record<string, number> {
     const circuits = Array.isArray(output) ? output : [output];
 
     return {
@@ -520,10 +509,7 @@ export class MultiCircuitExecutionService {
   /**
    * Estimate batch execution time
    */
-  estimateBatchTime(
-    circuits: ICircuitBatchEntry[],
-    options: IBatchExecutionOptions,
-  ): number {
+  estimateBatchTime(circuits: ICircuitBatchEntry[], options: IBatchExecutionOptions): number {
     const avgTimePerCircuit = 100; // ms
 
     switch (options.strategy) {

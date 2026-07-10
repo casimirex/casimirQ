@@ -95,17 +95,13 @@ describe('CliffordEngine', () => {
 
   describe('Pauli String Operations', () => {
     it('should handle Pauli propagation', () => {
-      const circuit = Circuit.builder(3)
-        .h(0).cx(0, 1).cx(1, 2)
-        .build();
+      const circuit = Circuit.builder(3).h(0).cx(0, 1).cx(1, 2).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should handle Pauli rotations', () => {
-      const circuit = Circuit.builder(2)
-        .h(0).s(0).cx(0, 1)
-        .build();
+      const circuit = Circuit.builder(2).h(0).s(0).cx(0, 1).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
@@ -113,18 +109,13 @@ describe('CliffordEngine', () => {
 
   describe('Tableau Operations', () => {
     it('should maintain tableau for n qubits', () => {
-      const circuit = Circuit.builder(4)
-        .h(0).h(1).h(2).h(3)
-        .cx(0, 1).cx(2, 3)
-        .build();
+      const circuit = Circuit.builder(4).h(0).h(1).h(2).h(3).cx(0, 1).cx(2, 3).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
 
     it('should handle conjugation by Clifford', () => {
-      const circuit = Circuit.builder(2)
-        .x(0).h(0).cx(0, 1).h(0)
-        .build();
+      const circuit = Circuit.builder(2).x(0).h(0).cx(0, 1).h(0).build();
       const result = engine.simulate(circuit);
       expect(result).toBeDefined();
     });
@@ -132,9 +123,7 @@ describe('CliffordEngine', () => {
 
   describe('Performance Features', () => {
     it('should handle many qubits efficiently', () => {
-      const circuit = Circuit.builder(50)
-        .h(0).cx(0, 1)
-        .build();
+      const circuit = Circuit.builder(50).h(0).cx(0, 1).build();
       const start = performance.now();
       const result = engine.simulate(circuit);
       const duration = performance.now() - start;

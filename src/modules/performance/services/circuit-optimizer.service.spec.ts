@@ -38,8 +38,11 @@ describe('CircuitOptimizerService', () => {
 
     it('should apply multiple optimization passes', () => {
       const circuit = Circuit.builder(3)
-        .h(0).h(0).h(0) // Multiple gates
-        .h(1).h(1)
+        .h(0)
+        .h(0)
+        .h(0) // Multiple gates
+        .h(1)
+        .h(1)
         .build();
 
       const result = service.optimize(circuit, { maxPasses: 3 });
@@ -51,20 +54,24 @@ describe('CircuitOptimizerService', () => {
     it('should recommend Clifford engine for Clifford circuits', () => {
       // Create a circuit with more multi-qubit gates (>50% of total) to trigger Clifford recommendation
       const circuit = Circuit.builder(5)
-        .h(0).h(1)
-        .cx(0, 1).cx(2, 3).cx(0, 2).cx(1, 3) // 4 multi-qubit gates
+        .h(0)
+        .h(1)
+        .cx(0, 1)
+        .cx(2, 3)
+        .cx(0, 2)
+        .cx(1, 3) // 4 multi-qubit gates
         .build();
 
       const recommendations = service.getRecommendations(circuit);
       expect(recommendations.length).toBeGreaterThan(0);
-      expect(recommendations.some(r => r.includes('Clifford'))).toBe(true);
+      expect(recommendations.some((r) => r.includes('Clifford'))).toBe(true);
     });
 
     it('should recommend MPS for large circuits', () => {
       const circuit = Circuit.builder(25).h(0).build();
       const recommendations = service.getRecommendations(circuit);
 
-      expect(recommendations.some(r => r.includes('MPS'))).toBe(true);
+      expect(recommendations.some((r) => r.includes('MPS'))).toBe(true);
     });
 
     it('should recommend partitioning for large gate counts', () => {
@@ -74,7 +81,7 @@ describe('CircuitOptimizerService', () => {
       }
 
       const recommendations = service.getRecommendations(circuit.build());
-      expect(recommendations.some(r => r.includes('partitioning'))).toBe(true);
+      expect(recommendations.some((r) => r.includes('partitioning'))).toBe(true);
     });
   });
 

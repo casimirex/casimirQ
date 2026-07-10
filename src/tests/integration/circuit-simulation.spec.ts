@@ -4,11 +4,12 @@
  * Verifies the complete pipeline: Circuit → Gates → Statevector Simulation
  */
 
-import { Circuit, createBellStateCircuit, createGHZStateCircuit } from '../../modules/circuit-engine/circuit';
+import {
+  Circuit,
+  createBellStateCircuit,
+  createGHZStateCircuit,
+} from '../../modules/circuit-engine/circuit';
 import { StatevectorEngine } from '../../modules/simulation-engines/engines/statevector-engine/statevector-engine';
-import { Complex } from '../../common/utils/complex';
-import { HGate, XGate } from '../../modules/gate-library/standard-gates/single-qubit-gates';
-import { CnotGate } from '../../modules/gate-library/standard-gates/multi-qubit-gates';
 
 describe('Circuit Simulation Integration', () => {
   let engine: StatevectorEngine;
@@ -135,7 +136,7 @@ describe('Circuit Simulation Integration', () => {
   describe('Multi-Qubit Gates', () => {
     it('should apply CNOT gate', () => {
       const circuit = Circuit.create(2)
-        .x(0)    // |01⟩
+        .x(0) // |01⟩
         .cx(0, 1); // CNOT flips target if control is |1⟩
 
       const result = engine.simulate(circuit);
@@ -147,7 +148,7 @@ describe('Circuit Simulation Integration', () => {
 
     it('should apply SWAP gate', () => {
       const circuit = Circuit.create(2)
-        .x(0)      // |01⟩
+        .x(0) // |01⟩
         .swap(0, 1); // Swap gives |10⟩
 
       const result = engine.simulate(circuit);
@@ -160,7 +161,7 @@ describe('Circuit Simulation Integration', () => {
     it('should apply Toffoli (CCX) gate', () => {
       const circuit = Circuit.create(3)
         .x(0)
-        .x(1)    // |011⟩ - both controls active
+        .x(1) // |011⟩ - both controls active
         .ccx(0, 1, 2); // Toffoli flips target
 
       const result = engine.simulate(circuit);

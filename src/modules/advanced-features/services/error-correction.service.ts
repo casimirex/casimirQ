@@ -108,7 +108,9 @@ export class ErrorCorrectionService {
 
     // Validate input
     if (logicalState.length !== code.nLogical) {
-      throw new Error(`Invalid logical state: expected ${code.nLogical} qubits, got ${logicalState.length}`);
+      throw new Error(
+        `Invalid logical state: expected ${code.nLogical} qubits, got ${logicalState.length}`,
+      );
     }
 
     // For now, return a simple encoding
@@ -186,11 +188,7 @@ export class ErrorCorrectionService {
   /**
    * Run full QEC simulation
    */
-  simulateQEC(
-    logicalState: number[],
-    codeName: string,
-    options: IQECOptions = {},
-  ): IQECResult {
+  simulateQEC(logicalState: number[], codeName: string, options: IQECOptions = {}): IQECResult {
     const startTime = performance.now();
     const code = this.getCode(codeName);
 
@@ -200,7 +198,10 @@ export class ErrorCorrectionService {
 
     // Initialize result tracking
     const syndromeMeasurements: ISyndromeResult[] = [];
-    const correctionsApplied: { round: number; correction: { qubit: number; operation: PauliOperator }[] }[] = [];
+    const correctionsApplied: {
+      round: number;
+      correction: { qubit: number; operation: PauliOperator }[];
+    }[] = [];
 
     // Encode state
     let currentState = this.encode(logicalState, code);
@@ -236,10 +237,7 @@ export class ErrorCorrectionService {
   /**
    * Calculate logical error rate
    */
-  calculateLogicalErrorRate(
-    physicalErrorRate: number,
-    code: IQECCode,
-  ): number {
+  calculateLogicalErrorRate(physicalErrorRate: number, code: IQECCode): number {
     // Approximate logical error rate using code distance
     // P_L ≈ C * (p/p_th)^(d/2)
     // where d is code distance, p_th is threshold
@@ -247,7 +245,8 @@ export class ErrorCorrectionService {
     const pThreshold = 0.01; // Typical threshold for surface codes
     const coefficient = 1.0; // Depends on code structure
 
-    const logicalErrorRate = coefficient * Math.pow(physicalErrorRate / pThreshold, code.distance / 2);
+    const logicalErrorRate =
+      coefficient * Math.pow(physicalErrorRate / pThreshold, code.distance / 2);
 
     return Math.min(logicalErrorRate, 1.0);
   }
@@ -255,10 +254,7 @@ export class ErrorCorrectionService {
   /**
    * Measure a stabilizer on the encoded state
    */
-  private measureStabilizer(
-    stabilizer: IStabilizer,
-    encodedState: IEncodedState,
-  ): number {
+  private measureStabilizer(_stabilizer: IStabilizer, _encodedState: IEncodedState): number {
     // Simplified measurement
     // Returns 0 or 1 based on stabilizer eigenvalue
 
@@ -277,7 +273,7 @@ export class ErrorCorrectionService {
    */
   private syndromeToError(
     stabilizer: IStabilizer,
-    code: IQECCode,
+    _code: IQECCode,
   ): { qubit: number; type: PauliOperator }[] {
     const errors: { qubit: number; type: PauliOperator }[] = [];
 
@@ -296,12 +292,12 @@ export class ErrorCorrectionService {
    */
   private computeCorrection(
     errorPattern: { qubit: number; type: PauliOperator }[],
-    code: IQECCode,
+    _code: IQECCode,
   ): { qubit: number; operation: PauliOperator }[] {
     // For single-qubit errors, apply inverse operation
     // X error -> apply X, Z error -> apply Z, Y error -> apply Y
 
-    return errorPattern.map(error => ({
+    return errorPattern.map((error) => ({
       qubit: error.qubit,
       operation: error.type,
     }));
@@ -310,11 +306,7 @@ export class ErrorCorrectionService {
   /**
    * Apply Pauli operator to a qubit
    */
-  private applyPauli(
-    state: IEncodedState,
-    qubit: number,
-    operation: PauliOperator,
-  ): void {
+  private applyPauli(state: IEncodedState, qubit: number, operation: PauliOperator): void {
     // Simplified Pauli application
     // In a full implementation, this would modify the quantum state
 

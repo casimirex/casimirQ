@@ -21,8 +21,7 @@ import { SimulationEnginesService } from '../../simulation-engines/simulation-en
  */
 export class QAOA implements IQuantumAlgorithm {
   readonly name = 'Quantum Approximate Optimization Algorithm';
-  readonly description =
-    'Finds approximate solutions to combinatorial optimization problems';
+  readonly description = 'Finds approximate solutions to combinatorial optimization problems';
   readonly category = 'optimization' as const;
   readonly references = [
     'Farhi, Goldstone, Gutmann, "A Quantum Approximate Optimization Algorithm", arXiv:1411.4028 (2014)',
@@ -110,11 +109,7 @@ export class QAOA implements IQuantumAlgorithm {
    * Standard mixer: H_M = Σ_i X_i
    * e^(-iβ H_M) = ⊗_i e^(-iβ X_i) = ⊗_i RX(i, 2β)
    */
-  private applyMixerHamiltonian(
-    builder: CircuitBuilder,
-    n: number,
-    beta: number,
-  ): CircuitBuilder {
+  private applyMixerHamiltonian(builder: CircuitBuilder, n: number, beta: number): CircuitBuilder {
     // Apply RX(2β) to each qubit
     for (let i = 0; i < n; i++) {
       builder = builder.rx(i, 2 * beta);
@@ -194,8 +189,8 @@ export class QAOA implements IQuantumAlgorithm {
     convergenceHistory: number[];
   } {
     // Initialize parameters
-    let gamma = Array.from({ length: p }, () => Math.random() * Math.PI);
-    let beta = Array.from({ length: p }, () => Math.random() * Math.PI / 2);
+    const gamma = Array.from({ length: p }, () => Math.random() * Math.PI);
+    const beta = Array.from({ length: p }, () => (Math.random() * Math.PI) / 2);
 
     const convergenceHistory: number[] = [];
     const learningRate = 0.1;
@@ -208,10 +203,7 @@ export class QAOA implements IQuantumAlgorithm {
       convergenceHistory.push(expectation);
 
       // Check convergence
-      if (
-        iter > 0 &&
-        Math.abs(convergenceHistory[iter] - convergenceHistory[iter - 1]) < 1e-6
-      ) {
+      if (iter > 0 && Math.abs(convergenceHistory[iter] - convergenceHistory[iter - 1]) < 1e-6) {
         return {
           optimalGamma: gamma,
           optimalBeta: beta,
@@ -244,10 +236,7 @@ export class QAOA implements IQuantumAlgorithm {
 
     // Final evaluation
     const finalCircuit = this.buildCircuit(n, edges, p, gamma, beta);
-    const { expectation: finalExpectation } = this.calculateExpectation(
-      finalCircuit,
-      edges,
-    );
+    const { expectation: finalExpectation } = this.calculateExpectation(finalCircuit, edges);
 
     return {
       optimalGamma: gamma,
@@ -328,11 +317,7 @@ export class QAOA implements IQuantumAlgorithm {
   /**
    * Execute QAOA.
    */
-  execute(
-    n: number,
-    edges: [number, number][],
-    p = 1,
-  ): AlgorithmResult {
+  execute(n: number, edges: [number, number][], p = 1): AlgorithmResult {
     const startTime = performance.now();
 
     const result = this.optimize(n, edges, p);

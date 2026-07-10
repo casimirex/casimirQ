@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  HttpCode,
-  HttpStatus,
-  ParseBoolPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { IOService } from './io.service';
 import { Circuit } from '../circuit-engine/circuit';
 
@@ -131,12 +121,7 @@ export class IOController {
       includeMetadata: dto.includeMetadata ?? true,
     };
 
-    const result = this.ioService.convert(
-      dto.data,
-      dto.fromFormat,
-      dto.toFormat,
-      options,
-    );
+    const result = this.ioService.convert(dto.data, dto.fromFormat, dto.toFormat, options);
 
     return {
       converted: true,

@@ -1,5 +1,5 @@
 import { Circuit, CircuitBuilder } from '../../circuit-engine/circuit';
-import { IFormatAdapter, IOOptions, ConversionResult } from '../interfaces/format-adapter.interface';
+import { IFormatAdapter, IOOptions } from '../interfaces/format-adapter.interface';
 
 /**
  * Qiskit QuantumCircuit JSON format adapter.

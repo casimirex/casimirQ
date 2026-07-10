@@ -1,13 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { AlgorithmsService } from './algorithms.service';
 import { PauliTerm } from './implementations/vqe';
 
@@ -108,11 +99,7 @@ export class AlgorithmsController {
   @Post('grover')
   @HttpCode(HttpStatus.OK)
   async executeGrover(@Body() dto: GroverDto) {
-    const result = this.algorithmsService.executeGrover(
-      dto.n,
-      dto.markedItem,
-      dto.iterations,
-    );
+    const result = this.algorithmsService.executeGrover(dto.n, dto.markedItem, dto.iterations);
     return {
       algorithm: "Grover's Search",
       parameters: {
@@ -135,11 +122,7 @@ export class AlgorithmsController {
   @Post('vqe')
   @HttpCode(HttpStatus.OK)
   async executeVQE(@Body() dto: VQEDto) {
-    const result = this.algorithmsService.executeVQE(
-      dto.n,
-      dto.hamiltonian,
-      dto.maxIterations,
-    );
+    const result = this.algorithmsService.executeVQE(dto.n, dto.hamiltonian, dto.maxIterations);
     const output = result.output as {
       optimalEnergy: number;
       iterations: number;

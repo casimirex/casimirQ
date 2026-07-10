@@ -117,10 +117,7 @@ export class ObservabilityService {
    * 6. Entangled qubits react
    * 7. UI restores
    */
-  private triggerVisualEffect(
-    event: IMeasurementEvent,
-    config: IObserverEffectConfig,
-  ): void {
+  private triggerVisualEffect(event: IMeasurementEvent, config: IObserverEffectConfig): void {
     const effectData = {
       type: 'collapse-visual',
       qubit: event.qubit,
@@ -179,10 +176,7 @@ export class ObservabilityService {
    * - Collapse: Decaying resonance based on probability
    * - Entanglement: Harmonic chord for correlated qubits
    */
-  private triggerAudioEffect(
-    event: IMeasurementEvent,
-    config: IObserverEffectConfig,
-  ): void {
+  private triggerAudioEffect(event: IMeasurementEvent, config: IObserverEffectConfig): void {
     const baseFreq = config.soundFrequency;
     const outcomeFreq = event.outcome === 0 ? baseFreq : baseFreq * 1.5;
 
@@ -234,10 +228,7 @@ export class ObservabilityService {
   /**
    * Trigger haptic feedback for mobile devices
    */
-  private triggerHapticEffect(
-    event: IMeasurementEvent,
-    config: IObserverEffectConfig,
-  ): void {
+  private triggerHapticEffect(event: IMeasurementEvent, config: IObserverEffectConfig): void {
     const hapticData = {
       type: 'haptic',
       pattern: [

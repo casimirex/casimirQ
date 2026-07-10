@@ -4,12 +4,7 @@
  * Implements API rate limiting per user
  */
 
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Request } from 'express';
 import { Observable } from 'rxjs';
 
@@ -32,9 +27,7 @@ export class RateLimitGuard implements CanActivate {
   private readonly maxRequests = 100;
   private readonly windowMs = 60000; // 1 minute
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const key = this.getRateLimitKey(request);
     const now = Date.now();
@@ -52,9 +45,7 @@ export class RateLimitGuard implements CanActivate {
 
     if (entry.count >= this.maxRequests) {
       throw new ForbiddenException(
-        `Rate limit exceeded. Try again in ${Math.ceil(
-          (entry.resetTime - now) / 1000,
-        )} seconds`,
+        `Rate limit exceeded. Try again in ${Math.ceil((entry.resetTime - now) / 1000)} seconds`,
       );
     }
 

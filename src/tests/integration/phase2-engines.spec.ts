@@ -4,7 +4,11 @@
  * Tests for MPS Engine, Clifford Engine, and Backend Router
  */
 
-import { Circuit, createBellStateCircuit, createGHZStateCircuit } from '../../modules/circuit-engine/circuit';
+import {
+  Circuit,
+  createBellStateCircuit,
+  createGHZStateCircuit,
+} from '../../modules/circuit-engine/circuit';
 import { StatevectorEngine } from '../../modules/simulation-engines/engines/statevector-engine/statevector-engine';
 import { MPSEngine } from '../../modules/simulation-engines/engines/mps-engine/mps-engine';
 import { CliffordEngine } from '../../modules/simulation-engines/engines/clifford-engine/clifford-engine';
@@ -20,11 +24,7 @@ describe('Phase 2: Simulation Backends', () => {
     statevectorEngine = new StatevectorEngine();
     mpsEngine = new MPSEngine();
     cliffordEngine = new CliffordEngine();
-    enginesService = new SimulationEnginesService(
-      statevectorEngine,
-      mpsEngine,
-      cliffordEngine,
-    );
+    enginesService = new SimulationEnginesService(statevectorEngine, mpsEngine, cliffordEngine);
   });
 
   describe('Clifford Engine', () => {
@@ -68,15 +68,7 @@ describe('Phase 2: Simulation Backends', () => {
     });
 
     it('should apply all Clifford gates', () => {
-      const circuit = Circuit.create(2)
-        .h(0)
-        .s(0)
-        .cx(0, 1)
-        .x(1)
-        .y(0)
-        .z(1)
-        .cz(0, 1)
-        .swap(0, 1);
+      const circuit = Circuit.create(2).h(0).s(0).cx(0, 1).x(1).y(0).z(1).cz(0, 1).swap(0, 1);
 
       const result = cliffordEngine.simulate(circuit);
       expect(result.numQubits).toBe(2);
@@ -166,23 +158,20 @@ describe('Phase 2: Simulation Backends', () => {
       const capabilities = enginesService.getCapabilities();
 
       expect(capabilities).toHaveLength(3);
-      expect(capabilities.map(c => c.type)).toContain('statevector');
-      expect(capabilities.map(c => c.type)).toContain('mps');
-      expect(capabilities.map(c => c.type)).toContain('clifford');
+      expect(capabilities.map((c) => c.type)).toContain('statevector');
+      expect(capabilities.map((c) => c.type)).toContain('mps');
+      expect(capabilities.map((c) => c.type)).toContain('clifford');
     });
 
     it('should compare multiple engines', () => {
       const circuit = createBellStateCircuit();
-      const results = enginesService.compareEngines(circuit, [
-        'statevector',
-        'clifford',
-      ]);
+      const results = enginesService.compareEngines(circuit, ['statevector', 'clifford']);
 
       expect(results.has('statevector')).toBe(true);
       expect(results.has('clifford')).toBe(true);
 
       // Both should produce valid results
-      for (const [engine, result] of results) {
+      for (const [, result] of results) {
         expect(result.numQubits).toBe(2);
         expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
       }
@@ -201,9 +190,7 @@ describe('Phase 2: Simulation Backends', () => {
       expect(cliffordResult.numQubits).toBe(2);
 
       // Clifford should be faster for larger circuits
-      expect(cliffordResult.executionTimeMs).toBeLessThanOrEqual(
-        svResult.executionTimeMs * 10,
-      );
+      expect(cliffordResult.executionTimeMs).toBeLessThanOrEqual(svResult.executionTimeMs * 10);
     });
 
     it('should show performance difference', () => {

@@ -11,7 +11,7 @@
 export class Complex {
   constructor(
     public readonly real: number,
-    public readonly imag: number
+    public readonly imag: number,
   ) {}
 
   /**
@@ -69,10 +69,7 @@ export class Complex {
    * (a + bi) + (c + di) = (a + c) + (b + d)i
    */
   add(other: Complex): Complex {
-    return new Complex(
-      this.real + other.real,
-      this.imag + other.imag
-    );
+    return new Complex(this.real + other.real, this.imag + other.imag);
   }
 
   /**
@@ -80,10 +77,7 @@ export class Complex {
    * (a + bi) - (c + di) = (a - c) + (b - d)i
    */
   sub(other: Complex): Complex {
-    return new Complex(
-      this.real - other.real,
-      this.imag - other.imag
-    );
+    return new Complex(this.real - other.real, this.imag - other.imag);
   }
 
   /**
@@ -93,7 +87,7 @@ export class Complex {
   multiply(other: Complex): Complex {
     return new Complex(
       this.real * other.real - this.imag * other.imag,
-      this.real * other.imag + this.imag * other.real
+      this.real * other.imag + this.imag * other.real,
     );
   }
 
@@ -108,7 +102,7 @@ export class Complex {
     }
     return new Complex(
       (this.real * other.real + this.imag * other.imag) / denominator,
-      (this.imag * other.real - this.real * other.imag) / denominator
+      (this.imag * other.real - this.real * other.imag) / denominator,
     );
   }
 
@@ -153,20 +147,14 @@ export class Complex {
    */
   exp(): Complex {
     const expReal = Math.exp(this.real);
-    return new Complex(
-      expReal * Math.cos(this.imag),
-      expReal * Math.sin(this.imag)
-    );
+    return new Complex(expReal * Math.cos(this.imag), expReal * Math.sin(this.imag));
   }
 
   /**
    * Natural logarithm: ln(z) = ln(|z|) + i*arg(z)
    */
   log(): Complex {
-    return new Complex(
-      Math.log(this.magnitude()),
-      this.phase()
-    );
+    return new Complex(Math.log(this.magnitude()), this.phase());
   }
 
   /**
@@ -183,10 +171,7 @@ export class Complex {
     const magnitude = this.magnitude();
     const phase = this.phase() / 2;
     const sqrtMag = Math.sqrt(magnitude);
-    return new Complex(
-      sqrtMag * Math.cos(phase),
-      sqrtMag * Math.sin(phase)
-    );
+    return new Complex(sqrtMag * Math.cos(phase), sqrtMag * Math.sin(phase));
   }
 
   /**
@@ -195,8 +180,7 @@ export class Complex {
    */
   approximatelyEquals(other: Complex, tolerance: number = 1e-10): boolean {
     return (
-      Math.abs(this.real - other.real) < tolerance &&
-      Math.abs(this.imag - other.imag) < tolerance
+      Math.abs(this.real - other.real) < tolerance && Math.abs(this.imag - other.imag) < tolerance
     );
   }
 

@@ -54,12 +54,24 @@ export const NOISE_MODELS: Record<string, INoiseModel> = {
   ibmq_lagos: {
     name: 'IBMQ Lagos',
     singleQubitErrors: [
-      { gate: 'u1', error: { type: 'depolarizing', targetQubits: [0], params: { pDepolarizing: 0.0002 } } },
-      { gate: 'u2', error: { type: 'depolarizing', targetQubits: [0], params: { pDepolarizing: 0.0004 } } },
-      { gate: 'u3', error: { type: 'depolarizing', targetQubits: [0], params: { pDepolarizing: 0.0008 } } },
+      {
+        gate: 'u1',
+        error: { type: 'depolarizing', targetQubits: [0], params: { pDepolarizing: 0.0002 } },
+      },
+      {
+        gate: 'u2',
+        error: { type: 'depolarizing', targetQubits: [0], params: { pDepolarizing: 0.0004 } },
+      },
+      {
+        gate: 'u3',
+        error: { type: 'depolarizing', targetQubits: [0], params: { pDepolarizing: 0.0008 } },
+      },
     ],
     twoQubitErrors: [
-      { gate: 'cx', error: { type: 'depolarizing', targetQubits: [0, 1], params: { pDepolarizing: 0.008 } } },
+      {
+        gate: 'cx',
+        error: { type: 'depolarizing', targetQubits: [0, 1], params: { pDepolarizing: 0.008 } },
+      },
     ],
     measurementErrors: [
       { qubit: 0, pFlip0to1: 0.02, pFlip1to0: 0.02 },
@@ -216,48 +228,25 @@ export class NoiseModelingService {
   /**
    * Apply a noise channel to state
    */
-  applyNoiseChannel(
-    state: Map<bigint, Complex>,
-    channel: INoiseChannel,
-  ): Map<bigint, Complex> {
+  applyNoiseChannel(state: Map<bigint, Complex>, channel: INoiseChannel): Map<bigint, Complex> {
     let noisyState = new Map(state);
 
     for (const qubit of channel.targetQubits) {
       switch (channel.type) {
         case 'depolarizing':
-          noisyState = this.applyDepolarizing(
-            noisyState,
-            qubit,
-            channel.params.pDepolarizing ?? 0,
-          );
+          noisyState = this.applyDepolarizing(noisyState, qubit, channel.params.pDepolarizing ?? 0);
           break;
         case 'amplitude_damping':
-          noisyState = this.applyAmplitudeDamping(
-            noisyState,
-            qubit,
-            channel.params.gamma ?? 0,
-          );
+          noisyState = this.applyAmplitudeDamping(noisyState, qubit, channel.params.gamma ?? 0);
           break;
         case 'phase_damping':
-          noisyState = this.applyPhaseDamping(
-            noisyState,
-            qubit,
-            channel.params.lambda ?? 0,
-          );
+          noisyState = this.applyPhaseDamping(noisyState, qubit, channel.params.lambda ?? 0);
           break;
         case 'bit_flip':
-          noisyState = this.applyBitFlip(
-            noisyState,
-            qubit,
-            channel.params.pBitFlip ?? 0,
-          );
+          noisyState = this.applyBitFlip(noisyState, qubit, channel.params.pBitFlip ?? 0);
           break;
         case 'phase_flip':
-          noisyState = this.applyPhaseFlip(
-            noisyState,
-            qubit,
-            channel.params.pPhaseFlip ?? 0,
-          );
+          noisyState = this.applyPhaseFlip(noisyState, qubit, channel.params.pPhaseFlip ?? 0);
           break;
         default:
           this.logger.warn(`Unknown noise channel type: ${channel.type}`);
@@ -270,10 +259,7 @@ export class NoiseModelingService {
   /**
    * Simulate with noise model
    */
-  simulateWithNoise(
-    state: Map<bigint, Complex>,
-    options: INoiseSimulationOptions,
-  ): INoiseResult {
+  simulateWithNoise(state: Map<bigint, Complex>, options: INoiseSimulationOptions): INoiseResult {
     const startTime = performance.now();
 
     if (!options.enableNoise) {
@@ -288,7 +274,11 @@ export class NoiseModelingService {
 
     // Apply noise channels
     let noisyState = new Map(state);
-    const errorRates = { total: 0, byGate: new Map<string, number>(), byQubit: new Map<number, number>() };
+    const errorRates = {
+      total: 0,
+      byGate: new Map<string, number>(),
+      byQubit: new Map<number, number>(),
+    };
 
     // Apply custom channels
     if (options.customChannels) {
@@ -333,10 +323,7 @@ export class NoiseModelingService {
   /**
    * Calculate state fidelity
    */
-  calculateFidelity(
-    ideal: Map<bigint, Complex>,
-    actual: Map<bigint, Complex>,
-  ): number {
+  calculateFidelity(ideal: Map<bigint, Complex>, actual: Map<bigint, Complex>): number {
     let fidelity = 0;
 
     // F = |⟨ψ|φ⟩|²
@@ -355,11 +342,12 @@ export class NoiseModelingService {
    */
   generateDeviceCharacteristics(model: INoiseModel): IDeviceCharacteristics {
     // Extract characteristics from noise model
-    const nQubits = Math.max(
-      ...model.singleQubitErrors.flatMap(e => e.error.targetQubits),
-      ...model.twoQubitErrors.flatMap(e => e.error.targetQubits),
-      0,
-    ) + 1;
+    const nQubits =
+      Math.max(
+        ...model.singleQubitErrors.flatMap((e) => e.error.targetQubits),
+        ...model.twoQubitErrors.flatMap((e) => e.error.targetQubits),
+        0,
+      ) + 1;
 
     const T1: number[] = [];
     const T2: number[] = [];
@@ -367,9 +355,10 @@ export class NoiseModelingService {
     for (let i = 0; i < nQubits; i++) {
       // Estimate T1 from amplitude damping rate
       // γ = 1 - exp(-t/T1)
-      const gamma = model.singleQubitErrors.find(e =>
-        e.error.targetQubits.includes(i) && e.error.type === 'amplitude_damping'
-      )?.error.params.gamma ?? 0;
+      const gamma =
+        model.singleQubitErrors.find(
+          (e) => e.error.targetQubits.includes(i) && e.error.type === 'amplitude_damping',
+        )?.error.params.gamma ?? 0;
 
       T1.push(gamma > 0 ? 1 / gamma : Infinity);
       T2.push(Infinity); // Would be extracted from phase damping
@@ -406,15 +395,12 @@ export class NoiseModelingService {
   /**
    * Estimate error probability after gate
    */
-  estimateGateError(
-    gateType: string,
-    qubits: number[],
-    model: INoiseModel,
-  ): number {
+  estimateGateError(gateType: string, qubits: number[], model: INoiseModel): number {
     // Find matching error for this gate
-    const errors = qubits.length === 1
-      ? model.singleQubitErrors.filter(e => e.gate === gateType || e.gate === 'all')
-      : model.twoQubitErrors.filter(e => e.gate === gateType);
+    const errors =
+      qubits.length === 1
+        ? model.singleQubitErrors.filter((e) => e.gate === gateType || e.gate === 'all')
+        : model.twoQubitErrors.filter((e) => e.gate === gateType);
 
     if (errors.length === 0) return 0;
 

@@ -6,6 +6,21 @@
  */
 
 import { IGate } from '../gate-library/interfaces/gate.interface';
+import {
+  XGate,
+  YGate,
+  ZGate,
+  HGate,
+  SGate,
+  SdgGate,
+  TGate,
+  TdgGate,
+  RxGate,
+  RyGate,
+  RzGate,
+  PhaseGate,
+} from '../gate-library/standard-gates/single-qubit-gates';
+import { SwapGate } from '../gate-library/standard-gates/multi-qubit-gates';
 
 /**
  * Represents a gate operation in a circuit
@@ -81,7 +96,6 @@ export class Circuit {
    * Apply Pauli-X gate
    */
   x(target: number): Circuit {
-    const { XGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new XGate(), target);
   }
 
@@ -89,7 +103,6 @@ export class Circuit {
    * Apply Pauli-Y gate
    */
   y(target: number): Circuit {
-    const { YGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new YGate(), target);
   }
 
@@ -97,7 +110,6 @@ export class Circuit {
    * Apply Pauli-Z gate
    */
   z(target: number): Circuit {
-    const { ZGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new ZGate(), target);
   }
 
@@ -105,7 +117,6 @@ export class Circuit {
    * Apply Hadamard gate
    */
   h(target: number): Circuit {
-    const { HGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new HGate(), target);
   }
 
@@ -113,7 +124,6 @@ export class Circuit {
    * Apply S gate (phase)
    */
   s(target: number): Circuit {
-    const { SGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new SGate(), target);
   }
 
@@ -121,7 +131,6 @@ export class Circuit {
    * Apply T gate (π/8)
    */
   t(target: number): Circuit {
-    const { TGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new TGate(), target);
   }
 
@@ -130,7 +139,6 @@ export class Circuit {
    * CNOT is a controlled-X gate: applies X to target when control is |1⟩
    */
   cx(control: number, target: number): Circuit {
-    const { XGate } = require('../gate-library/standard-gates/single-qubit-gates');
     // CNOT = controlled-X: apply X to target when control is |1⟩
     return this.apply(new XGate(), target, [control]);
   }
@@ -139,7 +147,6 @@ export class Circuit {
    * Apply CZ gate
    */
   cz(control: number, target: number): Circuit {
-    const { ZGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new ZGate(), target, [control]);
   }
 
@@ -147,7 +154,6 @@ export class Circuit {
    * Apply SWAP gate
    */
   swap(qubit1: number, qubit2: number): Circuit {
-    const { SwapGate } = require('../gate-library/standard-gates/multi-qubit-gates');
     return this.apply(new SwapGate(), [qubit1, qubit2]);
   }
 
@@ -156,7 +162,6 @@ export class Circuit {
    * Controlled-Controlled-X: applies X to target when both controls are |1⟩
    */
   ccx(control1: number, control2: number, target: number): Circuit {
-    const { XGate } = require('../gate-library/standard-gates/single-qubit-gates');
     // CCX = controlled-controlled-X
     return this.apply(new XGate(), target, [control1, control2]);
   }
@@ -165,7 +170,6 @@ export class Circuit {
    * Apply rotation around X-axis
    */
   rx(theta: number, target: number): Circuit {
-    const { RxGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new RxGate(theta), target);
   }
 
@@ -173,7 +177,6 @@ export class Circuit {
    * Apply rotation around Y-axis
    */
   ry(theta: number, target: number): Circuit {
-    const { RyGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new RyGate(theta), target);
   }
 
@@ -181,7 +184,6 @@ export class Circuit {
    * Apply rotation around Z-axis
    */
   rz(theta: number, target: number): Circuit {
-    const { RzGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new RzGate(theta), target);
   }
 
@@ -189,7 +191,6 @@ export class Circuit {
    * Apply phase gate
    */
   phase(lambda: number, target: number): Circuit {
-    const { PhaseGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new PhaseGate(lambda), target);
   }
 
@@ -200,7 +201,13 @@ export class Circuit {
     const targetArray = Array.isArray(targets) ? targets : [targets];
     // Measurement is handled specially by the simulator
     const operation: IGateOperation = {
-      gate: { type: 'measure', name: 'Measure', matrix: null as any, numQubits: 1, isUnitary: () => false },
+      gate: {
+        type: 'measure',
+        name: 'Measure',
+        matrix: null as any,
+        numQubits: 1,
+        isUnitary: () => false,
+      },
       targets: targetArray,
     };
     return new Circuit(this.numQubits, [...this.operations, operation], this.name);
@@ -210,12 +217,21 @@ export class Circuit {
    * Apply a barrier (synchronization point)
    */
   barrier(targets?: number | number[]): Circuit {
-    const targetArray = targets === undefined
-      ? Array.from({ length: this.numQubits }, (_, i) => i)
-      : Array.isArray(targets) ? targets : [targets];
+    const targetArray =
+      targets === undefined
+        ? Array.from({ length: this.numQubits }, (_, i) => i)
+        : Array.isArray(targets)
+          ? targets
+          : [targets];
 
     const operation: IGateOperation = {
-      gate: { type: 'barrier', name: 'Barrier', matrix: null as any, numQubits: targetArray.length, isUnitary: () => true },
+      gate: {
+        type: 'barrier',
+        name: 'Barrier',
+        matrix: null as any,
+        numQubits: targetArray.length,
+        isUnitary: () => true,
+      },
       targets: targetArray,
     };
     return new Circuit(this.numQubits, [...this.operations, operation], this.name);
@@ -228,11 +244,7 @@ export class Circuit {
     if (this.numQubits !== other.numQubits) {
       throw new Error('Cannot chain circuits with different number of qubits');
     }
-    return new Circuit(
-      this.numQubits,
-      [...this.operations, ...other.operations],
-      this.name,
-    );
+    return new Circuit(this.numQubits, [...this.operations, ...other.operations], this.name);
   }
 
   /**
@@ -309,7 +321,7 @@ export class Circuit {
     return {
       numQubits: this.numQubits,
       name: this.name,
-      operations: this.operations.map(op => ({
+      operations: this.operations.map((op) => ({
         gate: {
           type: op.gate.type,
           name: op.gate.name,
@@ -356,7 +368,6 @@ export class Circuit {
    * Apply S† (S-dagger) gate
    */
   sdg(target: number): Circuit {
-    const { SdgGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new SdgGate(), target);
   }
 
@@ -364,7 +375,6 @@ export class Circuit {
    * Apply T† (T-dagger) gate
    */
   tdg(target: number): Circuit {
-    const { TdgGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new TdgGate(), target);
   }
 
@@ -372,7 +382,6 @@ export class Circuit {
    * Apply phase gate P(λ) = diag(1, e^(iλ))
    */
   p(lambda: number, target: number): Circuit {
-    const { PhaseGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new PhaseGate(lambda), target);
   }
 
@@ -380,7 +389,6 @@ export class Circuit {
    * Apply controlled phase gate CP(λ)
    */
   cp(control: number, target: number, lambda: number): Circuit {
-    const { PhaseGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new PhaseGate(lambda), target, [control]);
   }
 
@@ -388,7 +396,6 @@ export class Circuit {
    * Apply CY (controlled-Y) gate
    */
   cy(control: number, target: number): Circuit {
-    const { YGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new YGate(), target, [control]);
   }
 
@@ -396,7 +403,6 @@ export class Circuit {
    * Apply CH (controlled-Hadamard) gate
    */
   ch(control: number, target: number): Circuit {
-    const { HGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new HGate(), target, [control]);
   }
 
@@ -404,7 +410,6 @@ export class Circuit {
    * Apply CRX (controlled-RX) gate
    */
   crx(control: number, target: number, theta: number): Circuit {
-    const { RxGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new RxGate(theta), target, [control]);
   }
 
@@ -412,7 +417,6 @@ export class Circuit {
    * Apply CRY (controlled-RY) gate
    */
   cry(control: number, target: number, theta: number): Circuit {
-    const { RyGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new RyGate(theta), target, [control]);
   }
 
@@ -420,7 +424,6 @@ export class Circuit {
    * Apply CRZ (controlled-RZ) gate
    */
   crz(control: number, target: number, theta: number): Circuit {
-    const { RzGate } = require('../gate-library/standard-gates/single-qubit-gates');
     return this.apply(new RzGate(theta), target, [control]);
   }
 
@@ -428,7 +431,6 @@ export class Circuit {
    * Apply Fredkin (CSWAP) gate
    */
   cswap(control: number, target1: number, target2: number): Circuit {
-    const { SwapGate } = require('../gate-library/standard-gates/multi-qubit-gates');
     return this.apply(new SwapGate(), [target1, target2], [control]);
   }
 

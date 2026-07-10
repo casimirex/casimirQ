@@ -7,7 +7,6 @@ import { Server, Socket } from 'socket.io';
 
 describe('QuantumVisualizationGateway Extended', () => {
   let gateway: QuantumVisualizationGateway;
-  let observabilityService: ObservabilityService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,7 +19,6 @@ describe('QuantumVisualizationGateway Extended', () => {
     }).compile();
 
     gateway = module.get<QuantumVisualizationGateway>(QuantumVisualizationGateway);
-    observabilityService = module.get<ObservabilityService>(ObservabilityService);
 
     // Mock server for broadcast operations
     const mockServerTo = jest.fn(() => ({ emit: jest.fn() }));
@@ -93,8 +91,8 @@ describe('QuantumVisualizationGateway Extended', () => {
     it('should handle bloch sphere with superposition state', () => {
       const result = gateway.handleGetBlochSphere({
         qubitIndex: 0,
-        alpha: { re: 1/Math.sqrt(2), im: 0 },
-        beta: { re: 1/Math.sqrt(2), im: 0 },
+        alpha: { re: 1 / Math.sqrt(2), im: 0 },
+        beta: { re: 1 / Math.sqrt(2), im: 0 },
       });
       expect(result).toBeDefined();
       expect(result.data).toBeDefined();
@@ -179,8 +177,8 @@ describe('QuantumVisualizationGateway Extended', () => {
       gateway.handleStreamState(mockSocket, {
         circuitId: 'test-circuit',
         stateVector: [
-          { re: 1/Math.sqrt(2), im: 0 },
-          { re: 0, im: 1/Math.sqrt(2) },
+          { re: 1 / Math.sqrt(2), im: 0 },
+          { re: 0, im: 1 / Math.sqrt(2) },
         ],
       });
       expect(true).toBe(true);
@@ -200,7 +198,7 @@ describe('QuantumVisualizationGateway Extended', () => {
       const mockTo = jest.fn(() => ({ emit: jest.fn() }));
       const mockSocket = { id: 'test-socket', emit: jest.fn(), to: mockTo } as unknown as Socket;
       gateway.handleStreamState(mockSocket, {
-        circuitId: "" as unknown as string,
+        circuitId: '' as unknown as string,
         stateVector: [1, 0],
       });
       expect(true).toBe(true);
@@ -309,7 +307,11 @@ describe('QuantumVisualizationGateway Extended', () => {
     });
 
     it('should clean up on disconnect', () => {
-      const mockSocket = { id: 'test-socket', rooms: new Set(), emit: jest.fn() } as unknown as Socket;
+      const mockSocket = {
+        id: 'test-socket',
+        rooms: new Set(),
+        emit: jest.fn(),
+      } as unknown as Socket;
       gateway.handleConnection(mockSocket);
       gateway.handleDisconnect(mockSocket);
       expect(true).toBe(true);

@@ -67,7 +67,6 @@ describe('VisualizationService', () => {
       expect(result).toBeDefined();
       expect(typeof result).toBe('string');
     });
-
   });
 
   describe('Animation', () => {

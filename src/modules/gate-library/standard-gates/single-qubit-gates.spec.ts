@@ -16,7 +16,7 @@ import {
   createGate,
   getStandardGateTypes,
 } from './single-qubit-gates';
-import { Complex, COMPLEX_CONSTANTS } from '../../../common/utils/complex';
+import { Complex } from '../../../common/utils/complex';
 
 describe('Single Qubit Gates', () => {
   describe('Pauli Gates', () => {

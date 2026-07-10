@@ -137,14 +137,18 @@ export class CacheService {
   keys(pattern?: RegExp): string[] {
     const keys = Array.from(this.cache.keys());
     if (!pattern) return keys;
-    return keys.filter(k => pattern.test(k));
+    return keys.filter((k) => pattern.test(k));
   }
 
   /**
    * Prefetch values
    */
-  async prefetch<T>(keys: string[], fetcher: (key: string) => Promise<T>, ttlMs?: number): Promise<void> {
-    const promises = keys.map(async key => {
+  async prefetch<T>(
+    keys: string[],
+    fetcher: (key: string) => Promise<T>,
+    ttlMs?: number,
+  ): Promise<void> {
+    const promises = keys.map(async (key) => {
       if (!this.has(key)) {
         try {
           const value = await fetcher(key);

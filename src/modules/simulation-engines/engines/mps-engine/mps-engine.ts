@@ -17,10 +17,10 @@ import {
   ISimulationOptions,
   IResourceEstimate,
 } from '../../interfaces/simulation-engine.interface';
-import { Circuit, IGateOperation } from '../../../circuit-engine/circuit';
+import { Circuit } from '../../../circuit-engine/circuit';
 import { Complex } from '../../../../common/utils/complex';
 import { Matrix } from '../../../../common/utils/matrix';
-import { Tensor3, Tensor4, entanglementEntropy } from './tensor-operations';
+import { Tensor3, Tensor4 } from './tensor-operations';
 
 interface MPSTensor {
   tensor: Tensor3;
@@ -106,7 +106,7 @@ export class MPSEngine implements ISimulationEngine {
   /**
    * Simulate circuit using MPS
    */
-  simulate(circuit: Circuit, options: ISimulationOptions = {}): ISimulationResult {
+  simulate(circuit: Circuit, _options: ISimulationOptions = {}): ISimulationResult {
     const startTime = performance.now();
     const startMemory = process.memoryUsage().heapUsed;
 
@@ -168,11 +168,7 @@ export class MPSEngine implements ISimulationEngine {
   /**
    * Apply single-qubit gate to MPS
    */
-  private applySingleQubitGate(
-    mps: MPSTensor[],
-    site: number,
-    gate: Matrix,
-  ): void {
+  private applySingleQubitGate(mps: MPSTensor[], site: number, gate: Matrix): void {
     const tensor = mps[site].tensor;
 
     // Apply gate: new_tensor[i][α][β] = Σ_j gate[i][j] × tensor[j][α][β]
@@ -199,12 +195,7 @@ export class MPSEngine implements ISimulationEngine {
    * Apply two-qubit gate to MPS
    * Uses canonicalization and SVD to maintain efficient representation
    */
-  private applyTwoQubitGate(
-    mps: MPSTensor[],
-    site1: number,
-    site2: number,
-    gate: Matrix,
-  ): void {
+  private applyTwoQubitGate(mps: MPSTensor[], site1: number, site2: number, gate: Matrix): void {
     // For simplicity, assume sites are adjacent
     // Non-adjacent gates would require SWAP operations
 
@@ -220,13 +211,7 @@ export class MPSEngine implements ISimulationEngine {
     const tensorR = mps[right].tensor;
 
     // Contract: T[i][j][α][γ] = Σ_β L[i][α][β] × R[j][β][γ]
-    const contracted = new Tensor4(
-      [],
-      2,
-      2,
-      tensorL.dLeft,
-      tensorR.dRight,
-    );
+    const contracted = new Tensor4([], 2, 2, tensorL.dLeft, tensorR.dRight);
 
     // Manual contraction
     for (let i = 0; i < 2; i++) {
@@ -238,9 +223,7 @@ export class MPSEngine implements ISimulationEngine {
           for (let γ = 0; γ < tensorR.dRight; γ++) {
             let sum = new Complex(0, 0);
             for (let β = 0; β < tensorL.dRight; β++) {
-              sum = sum.add(
-                tensorL.get(i, α, β).multiply(tensorR.get(j, β, γ)),
-              );
+              sum = sum.add(tensorL.get(i, α, β).multiply(tensorR.get(j, β, γ)));
             }
             contracted.data[i][j][α][γ] = sum;
           }
@@ -250,13 +233,7 @@ export class MPSEngine implements ISimulationEngine {
 
     // Apply gate to contracted tensor
     // Result[i][j][α][γ] = Σ_{i',j'} gate[i,j][i',j'] × contracted[i'][j'][α][γ]
-    const gatedTensor = new Tensor4(
-      [],
-      2,
-      2,
-      tensorL.dLeft,
-      tensorR.dRight,
-    );
+    const gatedTensor = new Tensor4([], 2, 2, tensorL.dLeft, tensorR.dRight);
 
     for (let i = 0; i < 2; i++) {
       gatedTensor.data[i] = [];
@@ -271,9 +248,7 @@ export class MPSEngine implements ISimulationEngine {
                 const gateIdx = i * 2 + j;
                 const gateIdxP = iP * 2 + jP;
                 const gateEl = gate.get(gateIdx, gateIdxP);
-                sum = sum.add(
-                  gateEl.multiply(contracted.data[iP][jP][α][γ]),
-                );
+                sum = sum.add(gateEl.multiply(contracted.data[iP][jP][α][γ]));
               }
             }
             gatedTensor.data[i][j][α][γ] = sum;
@@ -288,10 +263,7 @@ export class MPSEngine implements ISimulationEngine {
     const newRight = Tensor3.zeros(2, this.maxBondDimension, tensorR.dRight);
 
     // Simple truncation: just use original dimensions if possible
-    const bondDim = Math.min(
-      tensorL.dRight,
-      this.maxBondDimension,
-    );
+    const bondDim = Math.min(tensorL.dRight, this.maxBondDimension);
 
     // Copy data with truncation
     for (let i = 0; i < 2; i++) {
@@ -319,7 +291,7 @@ export class MPSEngine implements ISimulationEngine {
   /**
    * Canonicalize MPS around a site
    */
-  private canonicalize(mps: MPSTensor[], site: number): void {
+  private canonicalize(mps: MPSTensor[], _site: number): void {
     // Placeholder: proper canonicalization would use QR decomposition
     // For now, just normalize
     for (let i = 0; i < mps.length; i++) {
@@ -334,10 +306,7 @@ export class MPSEngine implements ISimulationEngine {
    * Convert MPS to full statevector
    * Only use for small systems or final output
    */
-  private mpsToStatevector(
-    mps: MPSTensor[],
-    numQubits: number,
-  ): Map<bigint, Complex> {
+  private mpsToStatevector(mps: MPSTensor[], numQubits: number): Map<bigint, Complex> {
     const statevector = new Map<bigint, Complex>();
 
     // Contract all tensors to get full state
@@ -381,10 +350,7 @@ export class MPSEngine implements ISimulationEngine {
             const newState = `${bits}${phys}_${nextBond}`;
 
             const existing = newCurrent.get(newState);
-            newCurrent.set(
-              newState,
-              existing ? existing.add(newAmp) : newAmp,
-            );
+            newCurrent.set(newState, existing ? existing.add(newAmp) : newAmp);
           }
         }
       }

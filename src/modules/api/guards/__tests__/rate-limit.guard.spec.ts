@@ -27,11 +27,12 @@ describe('RateLimitGuard', () => {
   ): ExecutionContext => {
     return {
       switchToHttp: () => ({
-        getRequest: () => ({
-          user: { userId },
-          route: { path },
-          path,
-        } as RequestWithUser),
+        getRequest: () =>
+          ({
+            user: { userId },
+            route: { path },
+            path,
+          }) as RequestWithUser,
       }),
     } as ExecutionContext;
   };

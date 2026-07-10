@@ -15,7 +15,9 @@ describe('Debug Simulation', () => {
     const result1 = engine.simulate(circuit1);
     console.log('Statevector after H|00⟩:');
     for (const [idx, amp] of result1.statevector.entries()) {
-      console.log(`  |${idx}⟩: ${amp.real.toFixed(4)} + ${amp.imag.toFixed(4)}i (prob: ${amp.magnitudeSquared().toFixed(4)})`);
+      console.log(
+        `  |${idx}⟩: ${amp.real.toFixed(4)} + ${amp.imag.toFixed(4)}i (prob: ${amp.magnitudeSquared().toFixed(4)})`,
+      );
     }
     // After H on qubit 0: should be |00⟩ (idx 0) and |10⟩ (idx 2)
     // Because qubit 0 is the first qubit (least significant in our indexing)
@@ -31,7 +33,9 @@ describe('Debug Simulation', () => {
     const result2 = engine.simulate(circuit2);
     console.log('Statevector after Bell circuit:');
     for (const [idx, amp] of result2.statevector.entries()) {
-      console.log(`  |${idx}⟩: ${amp.real.toFixed(4)} + ${amp.imag.toFixed(4)}i (prob: ${amp.magnitudeSquared().toFixed(4)})`);
+      console.log(
+        `  |${idx}⟩: ${amp.real.toFixed(4)} + ${amp.imag.toFixed(4)}i (prob: ${amp.magnitudeSquared().toFixed(4)})`,
+      );
     }
 
     // Just verify we have some output

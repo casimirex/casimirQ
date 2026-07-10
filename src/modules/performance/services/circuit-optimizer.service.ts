@@ -6,7 +6,10 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { Circuit } from '../../circuit-engine/circuit';
-import { ICircuitOptimizationOptions, IOptimizationResult } from '../interfaces/performance.interface';
+import {
+  ICircuitOptimizationOptions,
+  IOptimizationResult,
+} from '../interfaces/performance.interface';
 
 @Injectable()
 export class CircuitOptimizerService {
@@ -33,13 +36,10 @@ export class CircuitOptimizerService {
     let currentGateCount = originalGateCount;
 
     for (let pass = 0; pass < opts.maxPasses; pass++) {
-      let passOptimizations = 0;
-
       if (opts.removeIdentities) {
         const result = this.removeIdentityGates(optimizedCircuit);
         if (result.changed) {
           optimizedCircuit = result.circuit;
-          passOptimizations++;
           if (!appliedOptimizations.includes('remove-identities')) {
             appliedOptimizations.push('remove-identities');
           }
@@ -50,7 +50,6 @@ export class CircuitOptimizerService {
         const result = this.cancelInverseGates(optimizedCircuit);
         if (result.changed) {
           optimizedCircuit = result.circuit;
-          passOptimizations++;
           if (!appliedOptimizations.includes('cancel-inverses')) {
             appliedOptimizations.push('cancel-inverses');
           }
@@ -61,7 +60,6 @@ export class CircuitOptimizerService {
         const result = this.commuteGates(optimizedCircuit);
         if (result.changed) {
           optimizedCircuit = result.circuit;
-          passOptimizations++;
           if (!appliedOptimizations.includes('commute')) {
             appliedOptimizations.push('commute');
           }
@@ -72,7 +70,6 @@ export class CircuitOptimizerService {
         const result = this.fuseGates(optimizedCircuit);
         if (result.changed) {
           optimizedCircuit = result.circuit;
-          passOptimizations++;
           if (!appliedOptimizations.includes('fuse')) {
             appliedOptimizations.push('fuse');
           }
@@ -87,9 +84,10 @@ export class CircuitOptimizerService {
     }
 
     const optimizationTime = performance.now() - startTime;
-    const reductionPercent = originalGateCount > 0
-      ? ((originalGateCount - currentGateCount) / originalGateCount) * 100
-      : 0;
+    const reductionPercent =
+      originalGateCount > 0
+        ? ((originalGateCount - currentGateCount) / originalGateCount) * 100
+        : 0;
 
     return {
       originalGateCount,

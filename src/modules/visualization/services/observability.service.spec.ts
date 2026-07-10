@@ -15,10 +15,13 @@ describe('ObservabilityService', () => {
 
   describe('Measurement Events', () => {
     it('should emit measurement events', (done) => {
-      service.getMeasurementEvents().pipe(first()).subscribe((event) => {
-        expect(event).toBeDefined();
-        done();
-      });
+      service
+        .getMeasurementEvents()
+        .pipe(first())
+        .subscribe((event) => {
+          expect(event).toBeDefined();
+          done();
+        });
 
       const measurement: IMeasurementEvent = {
         circuitId: 'test-circuit',
@@ -50,13 +53,16 @@ describe('ObservabilityService', () => {
 
     it('should handle multiple measurement events', (done) => {
       const events: IMeasurementEvent[] = [];
-      service.getMeasurementEvents().pipe(take(2)).subscribe({
-        next: (event) => events.push(event),
-        complete: () => {
-          expect(events.length).toBe(2);
-          done();
-        },
-      });
+      service
+        .getMeasurementEvents()
+        .pipe(take(2))
+        .subscribe({
+          next: (event) => events.push(event),
+          complete: () => {
+            expect(events.length).toBe(2);
+            done();
+          },
+        });
 
       const createQubitState = (theta: number, alphaRe: number, betaRe: number): any => ({
         bloch: { theta, phi: 0 },
@@ -91,8 +97,7 @@ describe('ObservabilityService', () => {
     });
   });
 
-  describe('Collapse Animations', () => {
-  });
+  describe('Collapse Animations', () => {});
 
   describe('Configuration', () => {
     it('should return default config', () => {
@@ -111,5 +116,4 @@ describe('ObservabilityService', () => {
       expect(config.audio).toBe(true);
     });
   });
-
 });

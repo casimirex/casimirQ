@@ -74,7 +74,7 @@ export class QuilAdapter implements IFormatAdapter {
   /**
    * Parse qubit arguments from Quil syntax.
    */
-  private parseQubitArgs(args: string, declaredQubits: Map<string, number>): number[] {
+  private parseQubitArgs(args: string, _declaredQubits: Map<string, number>): number[] {
     const qubits: number[] = [];
     // Remove parameters in parentheses before parsing qubits
     const argsWithoutParams = args.replace(/\([^)]+\)/g, '');
@@ -117,29 +117,27 @@ export class QuilAdapter implements IFormatAdapter {
     qubits: number[],
     params: number[],
   ): CircuitBuilder {
-    const gateMap: Record<
-      string,
-      (b: CircuitBuilder, q: number[], p: number[]) => CircuitBuilder
-    > = {
-      h: (b, q) => b.h(q[0]),
-      x: (b, q) => b.x(q[0]),
-      y: (b, q) => b.y(q[0]),
-      z: (b, q) => b.z(q[0]),
-      s: (b, q) => b.s(q[0]),
-      t: (b, q) => b.t(q[0]),
-      rx: (b, q, p) => b.rx(q[0], p[0]),
-      ry: (b, q, p) => b.ry(q[0], p[0]),
-      rz: (b, q, p) => b.rz(q[0], p[0]),
-      cnot: (b, q) => b.cx(q[0], q[1]),
-      cz: (b, q) => b.cz(q[0], q[1]),
-      swap: (b, q) => b.swap(q[0], q[1]),
-      cphase: (b, q, p) => b.cp(q[0], q[1], p[0]),
-      ccnot: (b, q) => b.ccx(q[0], q[1], q[2]),
-      cswap: (b, q) => b.cswap(q[0], q[1], q[2]),
-      // Controlled gates
-      ch: (b, q) => b.ch(q[0], q[1]),
-      cphaseshift: (b, q, p) => b.cp(q[0], q[1], p[0]),
-    };
+    const gateMap: Record<string, (b: CircuitBuilder, q: number[], p: number[]) => CircuitBuilder> =
+      {
+        h: (b, q) => b.h(q[0]),
+        x: (b, q) => b.x(q[0]),
+        y: (b, q) => b.y(q[0]),
+        z: (b, q) => b.z(q[0]),
+        s: (b, q) => b.s(q[0]),
+        t: (b, q) => b.t(q[0]),
+        rx: (b, q, p) => b.rx(q[0], p[0]),
+        ry: (b, q, p) => b.ry(q[0], p[0]),
+        rz: (b, q, p) => b.rz(q[0], p[0]),
+        cnot: (b, q) => b.cx(q[0], q[1]),
+        cz: (b, q) => b.cz(q[0], q[1]),
+        swap: (b, q) => b.swap(q[0], q[1]),
+        cphase: (b, q, p) => b.cp(q[0], q[1], p[0]),
+        ccnot: (b, q) => b.ccx(q[0], q[1], q[2]),
+        cswap: (b, q) => b.cswap(q[0], q[1], q[2]),
+        // Controlled gates
+        ch: (b, q) => b.ch(q[0], q[1]),
+        cphaseshift: (b, q, p) => b.cp(q[0], q[1], p[0]),
+      };
 
     if (name in gateMap) {
       return gateMap[name](builder, qubits, params);

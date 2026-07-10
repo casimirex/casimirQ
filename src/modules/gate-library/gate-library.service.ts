@@ -6,16 +6,8 @@
  */
 
 import { Injectable } from '@nestjs/common';
+import { IGate, IParametricGate, IGateMetadata } from './interfaces/gate.interface';
 import {
-  IGate,
-  ISingleQubitGate,
-  ITwoQubitGate,
-  IThreeQubitGate,
-  IParametricGate,
-  IGateMetadata,
-} from './interfaces/gate.interface';
-import {
-  createGate,
   XGate,
   YGate,
   ZGate,
@@ -28,13 +20,7 @@ import {
   PhaseGate,
   UGate,
 } from './standard-gates/single-qubit-gates';
-import {
-  createMultiQubitGate,
-  CnotGate,
-  CzGate,
-  SwapGate,
-  ToffoliGate,
-} from './standard-gates/multi-qubit-gates';
+import { CnotGate, CzGate, SwapGate, ToffoliGate } from './standard-gates/multi-qubit-gates';
 
 @Injectable()
 export class GateLibraryService {
@@ -67,8 +53,9 @@ export class GateLibraryService {
     this.registerGate('rz', (params) => new RzGate(params?.theta ?? 0));
     this.registerGate('p', (params) => new PhaseGate(params?.lambda ?? 0));
     this.registerGate('phase', (params) => new PhaseGate(params?.lambda ?? 0));
-    this.registerGate('u', (params) =>
-      new UGate(params?.theta ?? 0, params?.phi ?? 0, params?.lambda ?? 0),
+    this.registerGate(
+      'u',
+      (params) => new UGate(params?.theta ?? 0, params?.phi ?? 0, params?.lambda ?? 0),
     );
 
     // Multi-qubit gates

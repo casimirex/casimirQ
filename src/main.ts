@@ -16,11 +16,23 @@ export { Matrix, matrixPower, controlledGate } from './common/utils/matrix';
 
 // Export gates
 export {
-  XGate, YGate, ZGate, HGate, SGate, TGate,
-  RxGate, RyGate, RzGate, PhaseGate, UGate,
+  XGate,
+  YGate,
+  ZGate,
+  HGate,
+  SGate,
+  TGate,
+  RxGate,
+  RyGate,
+  RzGate,
+  PhaseGate,
+  UGate,
 } from './modules/gate-library/standard-gates/single-qubit-gates';
 export {
-  CnotGate, CzGate, SwapGate, ToffoliGate,
+  CnotGate,
+  CzGate,
+  SwapGate,
+  ToffoliGate,
 } from './modules/gate-library/standard-gates/multi-qubit-gates';
 
 // Export circuit

@@ -327,15 +327,24 @@ export interface IExecutionScheduler {
   /**
    * Schedule batch execution
    */
-  scheduleBatch(circuits: ICircuitBatchEntry[], options: IBatchExecutionOptions): Promise<IBatchResult>;
+  scheduleBatch(
+    circuits: ICircuitBatchEntry[],
+    options: IBatchExecutionOptions,
+  ): Promise<IBatchResult>;
 
   /**
    * Schedule pipeline execution
    */
-  schedulePipeline(pipeline: ICircuitPipeline, input: Circuit | Circuit[]): Promise<IPipelineResult>;
+  schedulePipeline(
+    pipeline: ICircuitPipeline,
+    input: Circuit | Circuit[],
+  ): Promise<IPipelineResult>;
 
   /**
    * Schedule distributed execution
    */
-  scheduleDistributed(tasks: IDistributedTask[], nodes: IExecutionNode[]): Promise<IDistributedResult>;
+  scheduleDistributed(
+    tasks: IDistributedTask[],
+    nodes: IExecutionNode[],
+  ): Promise<IDistributedResult>;
 }

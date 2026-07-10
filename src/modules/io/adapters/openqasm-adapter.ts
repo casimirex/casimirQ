@@ -1,5 +1,5 @@
 import { Circuit, CircuitBuilder } from '../../circuit-engine/circuit';
-import { IFormatAdapter, IOOptions, ConversionResult } from '../interfaces/format-adapter.interface';
+import { IFormatAdapter, IOOptions } from '../interfaces/format-adapter.interface';
 import { GateRegistry } from '../../gate-library/gate-registry';
 
 /**
@@ -35,7 +35,7 @@ export class OpenQASMAdapter implements IFormatAdapter {
 
     let builder: CircuitBuilder | null = null;
     let inGateDef = false;
-    let customGates: Map<string, string[]> = new Map();
+    const customGates: Map<string, string[]> = new Map();
     let currentGateDef: string | null = null;
 
     for (const line of lines) {
@@ -208,7 +208,6 @@ export class OpenQASMAdapter implements IFormatAdapter {
     const replaced = expr.replace(/pi/g, `(${Math.PI})`);
 
     try {
-      // eslint-disable-next-line no-new-func
       return new Function('return ' + replaced)();
     } catch {
       return 0;
@@ -224,52 +223,50 @@ export class OpenQASMAdapter implements IFormatAdapter {
     qubits: number[],
     params: number[],
   ): CircuitBuilder {
-    const gateMap: Record<
-      string,
-      (b: CircuitBuilder, q: number[], p: number[]) => CircuitBuilder
-    > = {
-      // Single-qubit gates
-      h: (b, q) => b.h(q[0]),
-      x: (b, q) => b.x(q[0]),
-      y: (b, q) => b.y(q[0]),
-      z: (b, q) => b.z(q[0]),
-      s: (b, q) => b.s(q[0]),
-      sdg: (b, q) => b.sdg(q[0]),
-      t: (b, q) => b.t(q[0]),
-      tdg: (b, q) => b.tdg(q[0]),
-      rx: (b, q, p) => b.rx(q[0], p[0]),
-      ry: (b, q, p) => b.ry(q[0], p[0]),
-      rz: (b, q, p) => b.rz(q[0], p[0]),
-      u1: (b, q, p) => b.rz(q[0], p[0]),
-      u2: (b, q, p) => {
-        // U2(φ, λ) = Rz(φ)Ry(π/2)Rz(λ)
-        let bb = b.rz(q[0], p[1]);
-        bb = bb.ry(q[0], Math.PI / 2);
-        return bb.rz(q[0], p[0]);
-      },
-      u3: (b, q, p) => {
-        // U3(θ, φ, λ) = Rz(φ)Ry(θ)Rz(λ)
-        let bb = b.rz(q[0], p[2]);
-        bb = bb.ry(q[0], p[0]);
-        return bb.rz(q[0], p[1]);
-      },
+    const gateMap: Record<string, (b: CircuitBuilder, q: number[], p: number[]) => CircuitBuilder> =
+      {
+        // Single-qubit gates
+        h: (b, q) => b.h(q[0]),
+        x: (b, q) => b.x(q[0]),
+        y: (b, q) => b.y(q[0]),
+        z: (b, q) => b.z(q[0]),
+        s: (b, q) => b.s(q[0]),
+        sdg: (b, q) => b.sdg(q[0]),
+        t: (b, q) => b.t(q[0]),
+        tdg: (b, q) => b.tdg(q[0]),
+        rx: (b, q, p) => b.rx(q[0], p[0]),
+        ry: (b, q, p) => b.ry(q[0], p[0]),
+        rz: (b, q, p) => b.rz(q[0], p[0]),
+        u1: (b, q, p) => b.rz(q[0], p[0]),
+        u2: (b, q, p) => {
+          // U2(φ, λ) = Rz(φ)Ry(π/2)Rz(λ)
+          let bb = b.rz(q[0], p[1]);
+          bb = bb.ry(q[0], Math.PI / 2);
+          return bb.rz(q[0], p[0]);
+        },
+        u3: (b, q, p) => {
+          // U3(θ, φ, λ) = Rz(φ)Ry(θ)Rz(λ)
+          let bb = b.rz(q[0], p[2]);
+          bb = bb.ry(q[0], p[0]);
+          return bb.rz(q[0], p[1]);
+        },
 
-      // Multi-qubit gates
-      cx: (b, q) => b.cx(q[0], q[1]),
-      cy: (b, q) => b.cy(q[0], q[1]),
-      cz: (b, q) => b.cz(q[0], q[1]),
-      swap: (b, q) => b.swap(q[0], q[1]),
-      ch: (b, q) => b.ch(q[0], q[1]),
+        // Multi-qubit gates
+        cx: (b, q) => b.cx(q[0], q[1]),
+        cy: (b, q) => b.cy(q[0], q[1]),
+        cz: (b, q) => b.cz(q[0], q[1]),
+        swap: (b, q) => b.swap(q[0], q[1]),
+        ch: (b, q) => b.ch(q[0], q[1]),
 
-      // Toffoli
-      ccx: (b, q) => b.ccx(q[0], q[1], q[2]),
+        // Toffoli
+        ccx: (b, q) => b.ccx(q[0], q[1], q[2]),
 
-      // Controlled rotations
-      crx: (b, q, p) => b.crx(q[0], q[1], p[0]),
-      cry: (b, q, p) => b.cry(q[0], q[1], p[0]),
-      crz: (b, q, p) => b.crz(q[0], q[1], p[0]),
-      cu1: (b, q, p) => b.cp(q[0], q[1], p[0]),
-    };
+        // Controlled rotations
+        crx: (b, q, p) => b.crx(q[0], q[1], p[0]),
+        cry: (b, q, p) => b.cry(q[0], q[1], p[0]),
+        crz: (b, q, p) => b.crz(q[0], q[1], p[0]),
+        cu1: (b, q, p) => b.cp(q[0], q[1], p[0]),
+      };
 
     const lowerName = name.toLowerCase();
     if (lowerName in gateMap) {

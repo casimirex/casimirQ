@@ -369,7 +369,7 @@ describe('NoiseModelingService', () => {
         'depolarizing',
         [0, 1],
         { pDepolarizing: 0.1 },
-        'test-channel'
+        'test-channel',
       );
 
       expect(channel).toBeDefined();

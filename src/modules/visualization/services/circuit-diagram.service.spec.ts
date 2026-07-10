@@ -75,5 +75,4 @@ describe('CircuitDiagramService', () => {
       expect(result.gates.length).toBeGreaterThan(0);
     });
   });
-
 });

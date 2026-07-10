@@ -71,7 +71,7 @@ describe('QuantumMLService', () => {
 
     it('should initialize values in [0, 2π]', () => {
       const params = service.createVariationalParams(10);
-      params.values.forEach(v => {
+      params.values.forEach((v) => {
         expect(v).toBeGreaterThanOrEqual(0);
         expect(v).toBeLessThanOrEqual(2 * Math.PI);
       });

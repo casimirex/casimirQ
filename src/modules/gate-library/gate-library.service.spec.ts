@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { GateLibraryService } from './gate-library.service';
 import { Matrix } from '../../common/utils/matrix';
-import { Complex } from '../../common/utils/complex';
 
 describe('GateLibraryService', () => {
   let service: GateLibraryService;
@@ -123,7 +122,7 @@ describe('GateLibraryService', () => {
 
     it('should get metadata for all standard gates', () => {
       const gates = ['h', 'x', 'y', 'z', 's', 't', 'cx', 'cz', 'swap'];
-      gates.forEach(gate => {
+      gates.forEach((gate) => {
         const meta = service.getGateMetadata(gate);
         expect(meta).toBeDefined();
         expect(meta.type).toBeDefined();
