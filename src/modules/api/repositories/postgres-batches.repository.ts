@@ -2,7 +2,7 @@
  * Postgres Batches Repository
  */
 
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Pool, type QueryResultRow } from 'pg';
 import {
@@ -26,11 +26,7 @@ interface BatchRow extends QueryResultRow {
 }
 
 @Injectable()
-export class PostgresBatchesRepository
-  extends BatchesRepository
-  implements OnModuleInit, OnModuleDestroy
-{
-  private readonly logger = new Logger(PostgresBatchesRepository.name);
+export class PostgresBatchesRepository extends BatchesRepository implements OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor() {
@@ -39,26 +35,6 @@ export class PostgresBatchesRepository
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
     });
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS batches (
-        id          TEXT PRIMARY KEY,
-        user_id     TEXT NOT NULL,
-        status      TEXT NOT NULL,
-        total       INTEGER NOT NULL,
-        succeeded   INTEGER NOT NULL,
-        failed      INTEGER NOT NULL,
-        entries     JSONB NOT NULL DEFAULT '[]'::jsonb,
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    await this.pool.query(`
-      CREATE INDEX IF NOT EXISTS idx_batches_user_created
-        ON batches (user_id, created_at DESC, id DESC);
-    `);
-    this.logger.log('Batches table ready');
   }
 
   async onModuleDestroy(): Promise<void> {

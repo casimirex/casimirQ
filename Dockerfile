@@ -23,6 +23,7 @@ ENV PORT=3000
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY package.json ./
+COPY migrations ./migrations
 EXPOSE 3000
 USER node
 CMD ["node", "dist/main.js"]

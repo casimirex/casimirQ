@@ -6,13 +6,7 @@
  * Reuses DATABASE_URL / PGSSL configuration.
  */
 
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-  OnModuleDestroy,
-  OnModuleInit,
-} from '@nestjs/common';
+import { ConflictException, Injectable, OnModuleDestroy } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Pool, type QueryResultRow } from 'pg';
 import { CreateUserInput, StoredUser, UsersRepository } from './users.repository';
@@ -28,11 +22,7 @@ interface UserRow extends QueryResultRow {
 const UNIQUE_VIOLATION = '23505';
 
 @Injectable()
-export class PostgresUsersRepository
-  extends UsersRepository
-  implements OnModuleInit, OnModuleDestroy
-{
-  private readonly logger = new Logger(PostgresUsersRepository.name);
+export class PostgresUsersRepository extends UsersRepository implements OnModuleDestroy {
   private readonly pool: Pool;
 
   constructor() {
@@ -41,18 +31,6 @@ export class PostgresUsersRepository
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
     });
-  }
-
-  async onModuleInit(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id            TEXT PRIMARY KEY,
-        email         TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `);
-    this.logger.log('Users table ready');
   }
 
   async onModuleDestroy(): Promise<void> {

@@ -22,4 +22,6 @@ module.exports = {
   },
   testEnvironment: 'node',
   verbose: true,
+  // Applies migrations to TEST_DATABASE_URL (if set) before the suite runs.
+  globalSetup: '<rootDir>/../jest.global-setup.js',
 };
