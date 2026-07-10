@@ -37,6 +37,13 @@ import { RateLimitGuard } from './guards/rate-limit.guard';
 // Visualization services (dependency-free) used by the API layer
 import { CircuitDiagramService } from '../visualization/services/circuit-diagram.service';
 
+// Advanced-features services (dependency-free) used by the API layer
+import {
+  ErrorCorrectionService,
+  NoiseModelingService,
+  QuantumMLService,
+} from '../advanced-features/services';
+
 // Import SimulationEnginesModule for dependency injection
 import { SimulationEnginesModule } from '../simulation-engines/simulation-engines.module';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
@@ -88,6 +95,9 @@ import { JobsGateway } from './gateways/jobs.gateway';
     JobsGateway,
     SimulationEnginesService,
     CircuitDiagramService,
+    ErrorCorrectionService,
+    NoiseModelingService,
+    QuantumMLService,
   ],
   exports: [AuthService, JwtAuthGuard, RateLimitGuard, VisualizationGateway, JobsGateway],
 })

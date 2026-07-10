@@ -1,277 +1,134 @@
 /**
  * Advanced Features Controller Tests
  *
- * Tests for QEC, noise modeling, and quantum ML endpoints
+ * Verifies the QEC / noise / ML endpoints are backed by the real services.
  */
 
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { AdvancedFeaturesController } from '../advanced-features.controller';
+import {
+  ErrorCorrectionService,
+  NoiseModelingService,
+  QuantumMLService,
+} from '../../../advanced-features/services';
 
 describe('AdvancedFeaturesController', () => {
   let controller: AdvancedFeaturesController;
+  let ec: ErrorCorrectionService;
+  let ml: QuantumMLService;
 
   beforeEach(() => {
-    controller = new AdvancedFeaturesController();
+    ec = new ErrorCorrectionService();
+    ml = new QuantumMLService();
+    controller = new AdvancedFeaturesController(ec, new NoiseModelingService(), ml);
   });
 
-  // === Error Correction Tests ===
+  describe('error correction', () => {
+    it('lists real QEC codes with properties', async () => {
+      const { codes } = await controller.getQECCodes();
+      expect(codes.length).toBeGreaterThan(0);
+      expect(codes[0]).toHaveProperty('nPhysical');
+      expect(codes[0]).toHaveProperty('distance');
+    });
 
-  describe('getQECCodes', () => {
-    it('should return available QEC codes', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const result = await controller.getQECCodes(req);
+    it('encodes a logical state with a real code', async () => {
+      const codeId = ec.getAvailableCodes()[0];
+      const result = await controller.encodeCircuit(codeId, {});
+      expect(result.code).toBe(codeId);
+      expect(result.nPhysical).toBeGreaterThan(result.nLogical);
+    });
 
-      expect(result).toHaveProperty('codes');
-      expect(result.codes).toBeInstanceOf(Array);
-      expect(result.codes.length).toBeGreaterThan(0);
+    it('throws 404 for an unknown code', async () => {
+      await expect(controller.encodeCircuit('bogus', {})).rejects.toBeInstanceOf(NotFoundException);
+    });
 
-      const steane = result.codes.find((c) => c.id === 'steane');
-      expect(steane).toBeDefined();
-      expect(steane).toHaveProperty('name');
-      expect(steane).toHaveProperty('distance');
+    it('measures a syndrome for an error-free encoded state (all zeros)', async () => {
+      const codeId = ec.getAvailableCodes()[0];
+      const result = await controller.measureSyndrome({ code: codeId });
+      expect(Array.isArray(result.syndrome)).toBe(true);
+      expect(result.syndrome.every((s) => s === 0)).toBe(true);
     });
   });
 
-  describe('encodeCircuit', () => {
-    it('should encode circuit with QEC code', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { circuitId: 'circuit-123', qubits: [0, 1] };
-      const result = await controller.encodeCircuit('steane', body, req);
-
-      expect(result).toHaveProperty('encodedCircuitId');
-      expect(result).toHaveProperty('code', 'steane');
-      expect(result).toHaveProperty('physicalQubits');
-      expect(result).toHaveProperty('logicalQubits');
+  describe('noise modeling', () => {
+    it('lists channels and real device models', async () => {
+      const result = await controller.getNoiseChannels();
+      expect(result.channels.map((c) => c.id)).toContain('depolarizing');
+      expect(Array.isArray(result.models)).toBe(true);
     });
-  });
 
-  describe('measureSyndrome', () => {
-    it('should measure syndrome', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { circuitId: 'circuit-123' };
-      const result = await controller.measureSyndrome(body, req);
-
-      expect(result).toHaveProperty('syndrome');
-      expect(result).toHaveProperty('corrected');
-    });
-  });
-
-  // === Noise Modeling Tests ===
-
-  describe('getNoiseChannels', () => {
-    it('should return noise channel types', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const result = await controller.getNoiseChannels(req);
-
-      expect(result).toHaveProperty('channels');
-      expect(result.channels).toBeInstanceOf(Array);
-
-      const depolarizing = result.channels.find((c) => c.id === 'depolarizing');
-      expect(depolarizing).toBeDefined();
-      expect(depolarizing).toHaveProperty('params');
-    });
-  });
-
-  describe('applyNoise', () => {
-    it('should apply noise channels to circuit', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        circuitId: 'circuit-123',
+    it('validates noise channel params', async () => {
+      const result = await controller.applyNoise({
         channels: [
-          { type: 'depolarizing', params: { probability: 0.01 }, targets: [0] },
+          { type: 'depolarizing', params: { pDepolarizing: 0.1 }, targets: [0] },
+          { type: 'depolarizing', params: { pDepolarizing: 5 }, targets: [0] }, // invalid
         ],
-      };
-      const result = await controller.applyNoise(body, req);
+      });
+      expect(result.channels[0].valid).toBe(true);
+      expect(result.channels[1].valid).toBe(false);
+      expect(result.allValid).toBe(false);
+    });
 
-      expect(result).toHaveProperty('noisyCircuitId');
-      expect(result).toHaveProperty('channelsApplied');
-      expect(result).toHaveProperty('noiseLevel');
+    it('characterizes a real device model', async () => {
+      const model = new NoiseModelingService().getAvailableModels()[0];
+      const result = await controller.characterizeNoise({ model });
+      expect(result.model).toBe(model);
+      expect(result.characteristics).toBeDefined();
+    });
+
+    it('throws 404 for an unknown model', async () => {
+      await expect(controller.characterizeNoise({ model: 'nope' })).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
   });
 
-  describe('characterizeNoise', () => {
-    it('should characterize noise using gate set', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { circuitId: 'circuit-123', method: 'gate' as const };
-      const result = await controller.characterizeNoise(body, req);
-
-      expect(result).toHaveProperty('method', 'gate');
-      expect(result).toHaveProperty('parameters');
+  describe('quantum ML', () => {
+    it('lists ansatze and feature maps', async () => {
+      const result = await controller.getVQEAnsatzTypes();
+      expect(result.ansatze.length).toBeGreaterThan(0);
+      expect(result.featureMaps.length).toBeGreaterThan(0);
     });
 
-    it('should characterize noise using measurement', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { circuitId: 'circuit-123', method: 'measurement' as const };
-      const result = await controller.characterizeNoise(body, req);
-
-      expect(result.method).toBe('measurement');
-    });
-  });
-
-  // === Quantum ML Tests ===
-
-  describe('getVQEAnsatzTypes', () => {
-    it('should return VQE ansatz types', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const result = await controller.getVQEAnsatzTypes(req);
-
-      expect(result).toHaveProperty('ansatzes');
-      expect(result.ansatzes).toBeInstanceOf(Array);
-
-      const uccsd = result.ansatzes.find((a) => a.id === 'uccsd');
-      expect(uccsd).toBeDefined();
-      expect(uccsd).toHaveProperty('name');
-      expect(uccsd).toHaveProperty('description');
-    });
-  });
-
-  describe('runVQE', () => {
-    it('should queue VQE optimization', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        hamiltonian: [[1, 0], [0, -1]],
-        ansatz: 'uccsd',
-      };
-      const result = await controller.runVQE(body, req);
-
-      expect(result).toHaveProperty('jobId');
-      expect(result).toHaveProperty('status', 'queued');
-      expect(result).toHaveProperty('ansatz', 'uccsd');
-      expect(result).toHaveProperty('maxIterations');
+    it('runs a real VQE optimization', async () => {
+      const ansatz = ml.getAvailableAnsatze()[0];
+      const result = await controller.runVQE({
+        hamiltonian: [
+          { pauli: 'ZZ', coefficient: 1 },
+          { pauli: 'XI', coefficient: 0.5 },
+        ],
+        ansatz,
+        maxIterations: 20,
+      });
+      expect(typeof result.minEnergy).toBe('number');
+      expect(Array.isArray(result.optimalParams)).toBe(true);
+      expect(result.iterations).toBeGreaterThan(0);
     });
 
-    it('should use custom optimizer settings', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        hamiltonian: [[1, 0], [0, -1]],
-        ansatz: 'hardware_efficient',
-        optimizer: 'SPSA',
-        maxIterations: 200,
-      };
-      const result = await controller.runVQE(body, req);
-
-      expect(result.optimizer).toBe('SPSA');
-      expect(result.maxIterations).toBe(200);
-    });
-  });
-
-  describe('trainClassifier', () => {
-    it('should queue classifier training', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        data: [[1, 2], [3, 4]],
-        labels: [0, 1],
-      };
-      const result = await controller.trainClassifier(body, req);
-
-      expect(result).toHaveProperty('jobId');
-      expect(result).toHaveProperty('status', 'queued');
-      expect(result).toHaveProperty('epochs');
+    it('rejects an unknown ansatz', async () => {
+      await expect(
+        controller.runVQE({ hamiltonian: [{ pauli: 'Z', coefficient: 1 }], ansatz: 'nope' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('should support custom feature map and epochs', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        data: [[1, 2]],
-        labels: [0],
-        featureMap: 'custom',
-        epochs: 50,
-      };
-      const result = await controller.trainClassifier(body, req);
-
-      expect(result.featureMap).toBe('custom');
-      expect(result.epochs).toBe(50);
-    });
-  });
-
-  describe('getKernelMatrix', () => {
-    it('should return kernel matrix', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { data: [[1, 2], [3, 4], [5, 6]] };
-      const result = await controller.getKernelMatrix(body, req);
-
-      expect(result).toHaveProperty('size');
+    it('computes a real symmetric kernel matrix', async () => {
+      const data = [
+        [0, 1],
+        [1, 0],
+        [1, 1],
+      ];
+      const result = await controller.getKernelMatrix({ data });
       expect(result.size).toEqual([3, 3]);
-      expect(result).toHaveProperty('matrix');
-      expect(result.matrix).toBeInstanceOf(Array);
       expect(result.matrix).toHaveLength(3);
+      // Kernel matrices are symmetric with a unit diagonal.
+      expect(result.matrix[0][0]).toBeCloseTo(1, 5);
+      expect(result.matrix[0][1]).toBeCloseTo(result.matrix[1][0], 5);
     });
 
-    it('should use custom gamma parameter', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { data: [[1, 2]], gamma: 2.0 };
-      const result = await controller.getKernelMatrix(body, req);
-
-      expect(result.gamma).toBe(2.0);
-    });
-  });
-
-  // === Multi-Circuit Execution Tests ===
-
-  describe('batchExecute', () => {
-    it('should queue batch execution', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        circuitIds: ['circuit-1', 'circuit-2', 'circuit-3'],
-        shots: 1024,
-      };
-      const result = await controller.batchExecute(body, req);
-
-      expect(result).toHaveProperty('batchId');
-      expect(result).toHaveProperty('circuits', 3);
-      expect(result).toHaveProperty('status', 'queued');
-    });
-
-    it('should calculate estimated time based on circuit count', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        circuitIds: ['circuit-1', 'circuit-2'],
-      };
-      const result = await controller.batchExecute(body, req);
-
-      expect(result.estimatedTime).toBe(2000);
-    });
-  });
-
-  describe('getBatchResults', () => {
-    it('should return batch results', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const result = await controller.getBatchResults('batch-123', req);
-
-      expect(result).toHaveProperty('batchId', 'batch-123');
-      expect(result).toHaveProperty('status');
-      expect(result).toHaveProperty('results');
-    });
-  });
-
-  describe('createPipeline', () => {
-    it('should create pipeline', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = {
-        name: 'Test Pipeline',
-        stages: [
-          { type: 'compile', config: {} },
-          { type: 'execute', config: { shots: 1024 } },
-        ],
-      };
-      const result = await controller.createPipeline(body, req);
-
-      expect(result).toHaveProperty('pipelineId');
-      expect(result).toHaveProperty('name', 'Test Pipeline');
-      expect(result).toHaveProperty('stages', 2);
-      expect(result).toHaveProperty('status', 'created');
-    });
-  });
-
-  describe('runPipeline', () => {
-    it('should run pipeline', async () => {
-      const req = { user: { userId: 'user-1' } };
-      const body = { input: { circuitId: 'circuit-123' } };
-      const result = await controller.runPipeline('pipeline-123', body, req);
-
-      expect(result).toHaveProperty('pipelineId', 'pipeline-123');
-      expect(result).toHaveProperty('runId');
-      expect(result).toHaveProperty('status', 'running');
-      expect(result).toHaveProperty('input');
+    it('rejects empty kernel data', async () => {
+      await expect(controller.getKernelMatrix({ data: [] })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 });
