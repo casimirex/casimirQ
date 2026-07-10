@@ -1,7 +1,11 @@
 /**
  * Advanced Features API Controller
  *
- * REST endpoints for QEC, noise modeling, and quantum ML
+ * REST endpoints for QEC, noise modeling and quantum ML, backed by the real
+ * ErrorCorrectionService / NoiseModelingService / QuantumMLService.
+ *
+ * Batch execution and pipelines (multi-circuit orchestration) are not yet
+ * wired and still return placeholder responses.
  */
 
 import {
@@ -10,268 +14,199 @@ import {
   Post,
   Param,
   Body,
-  Query,
-  HttpCode,
-  HttpStatus,
   UseGuards,
-  Request,
+  NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RateLimitGuard } from '../guards/rate-limit.guard';
+import {
+  ErrorCorrectionService,
+  NoiseModelingService,
+  QuantumMLService,
+} from '../../advanced-features/services';
+import { IOptimizerConfig, IVQEConfig } from '../../advanced-features/interfaces';
+
+/** The noise channel primitives the NoiseModelingService supports. */
+const NOISE_CHANNEL_TYPES = [
+  'depolarizing',
+  'amplitude_damping',
+  'phase_damping',
+  'bit_flip',
+  'phase_flip',
+] as const;
 
 @Controller('api/v1/advanced')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class AdvancedFeaturesController {
-  // === Error Correction Endpoints ===
+  constructor(
+    private readonly errorCorrection: ErrorCorrectionService,
+    private readonly noise: NoiseModelingService,
+    private readonly ml: QuantumMLService,
+  ) {}
 
-  /**
-   * Get available QEC codes
-   */
+  // === Error Correction ===
+
+  /** List the available QEC codes with their real properties. */
   @Get('error-correction/codes')
-  async getQECCodes(@Request() req: any) {
-    return {
-      codes: [
-        { id: 'steane', name: 'Steane [[7,1,3]]', distance: 3 },
-        { id: 'shor', name: 'Shor [[9,1,3]]', distance: 3 },
-        { id: 'surface', name: 'Surface Code', distance: 5 },
-      ],
-    };
+  async getQECCodes() {
+    const codes = this.errorCorrection.getAvailableCodes().map((id) => ({
+      id,
+      ...this.errorCorrection.getCodeProperties(id),
+    }));
+    return { codes };
   }
 
-  /**
-   * Apply QEC to circuit
-   */
+  /** Encode a logical state with the chosen code. */
   @Post('error-correction/:codeId/encode')
-  async encodeCircuit(
-    @Param('codeId') codeId: string,
-    @Body() body: { circuitId: string; qubits?: number[] },
-    @Request() req: any,
-  ) {
+  async encodeCircuit(@Param('codeId') codeId: string, @Body() body: { logicalState?: number[] }) {
+    const code = this.errorCorrection.getCode(codeId);
+    if (!code) {
+      throw new NotFoundException(`QEC code "${codeId}" not found`);
+    }
+    const logicalState = body.logicalState ?? new Array(code.nLogical).fill(0);
+    if (logicalState.length !== code.nLogical) {
+      throw new BadRequestException(
+        `logicalState must have ${code.nLogical} entries for code "${codeId}"`,
+      );
+    }
+    const encoded = this.errorCorrection.encode(logicalState, code);
     return {
-      encodedCircuitId: `encoded-${body.circuitId}`,
       code: codeId,
-      physicalQubits: body.qubits?.length || 7,
-      logicalQubits: 1,
+      nPhysical: code.nPhysical,
+      nLogical: code.nLogical,
+      logicalState: encoded.logicalState,
+      syndrome: encoded.syndrome ?? [],
     };
   }
 
-  /**
-   * Measure syndrome
-   */
+  /** Measure the syndrome of an encoded logical state. */
   @Post('error-correction/syndrome')
-  async measureSyndrome(
-    @Body() body: { circuitId: string; stabilizers?: string[] },
-    @Request() req: any,
-  ) {
+  async measureSyndrome(@Body() body: { code: string; logicalState?: number[] }) {
+    const code = this.errorCorrection.getCode(body.code);
+    if (!code) {
+      throw new NotFoundException(`QEC code "${body.code}" not found`);
+    }
+    const logicalState = body.logicalState ?? new Array(code.nLogical).fill(0);
+    const encoded = this.errorCorrection.encode(logicalState, code);
+    const result = this.errorCorrection.measureSyndrome(encoded, code);
     return {
-      syndrome: '0000',
-      errorLocation: null,
-      corrected: true,
+      code: body.code,
+      syndrome: result.syndrome,
+      errorPattern: result.errorPattern ?? [],
+      correction: result.correction ?? [],
     };
   }
 
-  // === Noise Modeling Endpoints ===
+  // === Noise Modeling ===
 
-  /**
-   * Get noise channel types
-   */
+  /** List supported noise channels and the built-in device models. */
   @Get('noise/channels')
-  async getNoiseChannels(@Request() req: any) {
+  async getNoiseChannels() {
     return {
-      channels: [
-        { id: 'depolarizing', name: 'Depolarizing', params: ['probability'] },
-        { id: 'amplitudeDamping', name: 'Amplitude Damping', params: ['gamma'] },
-        { id: 'phaseDamping', name: 'Phase Damping', params: ['gamma'] },
-        { id: 'bitFlip', name: 'Bit Flip', params: ['probability'] },
-        { id: 'phaseFlip', name: 'Phase Flip', params: ['probability'] },
-      ],
+      channels: NOISE_CHANNEL_TYPES.map((id) => ({ id })),
+      models: this.noise.getAvailableModels(),
     };
   }
 
-  /**
-   * Apply noise to circuit
-   */
+  /** Validate a set of noise channels against the model. */
   @Post('noise/apply')
   async applyNoise(
-    @Body() body: {
-      circuitId: string;
+    @Body()
+    body: {
       channels: Array<{ type: string; params: Record<string, number>; targets: number[] }>;
     },
-    @Request() req: any,
   ) {
+    const channels = (body.channels ?? []).map((c) => ({
+      ...c,
+      valid: this.noise.validateNoiseParams(c.type as any, c.params as any),
+    }));
     return {
-      noisyCircuitId: `noisy-${body.circuitId}`,
-      channelsApplied: body.channels.length,
-      noiseLevel: 'medium',
+      channels,
+      allValid: channels.every((c) => c.valid),
     };
   }
 
-  /**
-   * Characterize noise
-   */
+  /** Characterize a device from one of the built-in noise models. */
   @Post('noise/characterize')
-  async characterizeNoise(
-    @Body() body: { circuitId: string; method: 'gate' | 'measurement' },
-    @Request() req: any,
-  ) {
+  async characterizeNoise(@Body() body: { model: string }) {
+    const model = this.noise.getModel(body.model);
+    if (!model) {
+      throw new NotFoundException(`Noise model "${body.model}" not found`);
+    }
     return {
-      method: body.method,
-      parameters: {
-        fidelity: 0.995,
-        errorRate: 0.005,
-        coherenceTime: 100,
-      },
+      model: body.model,
+      characteristics: this.noise.generateDeviceCharacteristics(model),
     };
   }
 
-  // === Quantum ML Endpoints ===
+  // === Quantum ML ===
 
-  /**
-   * Get VQE ansatz types
-   */
+  /** List the available VQE ansatze and feature maps. */
   @Get('ml/vqe/ansatz')
-  async getVQEAnsatzTypes(@Request() req: any) {
+  async getVQEAnsatzTypes() {
     return {
-      ansatzes: [
-        { id: 'uccsd', name: 'UCCSD', description: 'Unitary Coupled Cluster' },
-        { id: 'hardware_efficient', name: 'Hardware Efficient', description: 'Hardware-efficient ansatz' },
-        { id: 'qaoa', name: 'QAOA', description: 'Quantum Approximate Optimization' },
-      ],
+      ansatze: this.ml.getAvailableAnsatze().map((id) => ({
+        id,
+        ...this.ml.getAnsatzTemplate(id),
+      })),
+      featureMaps: this.ml.getAvailableFeatureMaps(),
     };
   }
 
-  /**
-   * Run VQE optimization
-   */
+  /** Run a real VQE optimization. */
   @Post('ml/vqe/run')
   async runVQE(
-    @Body() body: {
-      hamiltonian: number[][];
+    @Body()
+    body: {
+      hamiltonian: { pauli: string; coefficient: number }[];
       ansatz: string;
-      optimizer?: string;
+      optimizer?: IOptimizerConfig['type'];
       maxIterations?: number;
-    },
-    @Request() req: any,
-  ) {
-    return {
-      jobId: `vqe-${Date.now()}`,
-      status: 'queued',
-      ansatz: body.ansatz,
-      optimizer: body.optimizer || 'COBYLA',
-      maxIterations: body.maxIterations || 100,
-    };
-  }
-
-  /**
-   * Train quantum classifier
-   */
-  @Post('ml/classifier/train')
-  async trainClassifier(
-    @Body() body: {
-      data: number[][];
-      labels: number[];
-      featureMap?: string;
-      epochs?: number;
-    },
-    @Request() req: any,
-  ) {
-    return {
-      jobId: `classifier-${Date.now()}`,
-      status: 'queued',
-      featureMap: body.featureMap || 'ZZ',
-      epochs: body.epochs || 100,
-    };
-  }
-
-  /**
-   * Get quantum kernel matrix
-   */
-  @Post('ml/kernel/matrix')
-  async getKernelMatrix(
-    @Body() body: { data: number[][]; gamma?: number },
-    @Request() req: any,
-  ) {
-    const n = body.data.length;
-    return {
-      size: [n, n],
-      matrix: Array.from({ length: n }, () =>
-        Array.from({ length: n }, () => Math.random()),
-      ),
-      gamma: body.gamma || 1.0,
-    };
-  }
-
-  // === Multi-Circuit Execution Endpoints ===
-
-  /**
-   * Execute batch of circuits
-   */
-  @Post('batch/execute')
-  async batchExecute(
-    @Body() body: {
-      circuitIds: string[];
       shots?: number;
-      priority?: number;
     },
-    @Request() req: any,
   ) {
+    const ansatz = this.ml.getAnsatzTemplate(body.ansatz);
+    if (!ansatz) {
+      throw new BadRequestException(`Unknown ansatz "${body.ansatz}"`);
+    }
+    if (!Array.isArray(body.hamiltonian) || body.hamiltonian.length === 0) {
+      throw new BadRequestException('hamiltonian must be a non-empty Pauli-term array');
+    }
+
+    const config: IVQEConfig = {
+      hamiltonian: body.hamiltonian,
+      ansatz,
+      optimizer: {
+        type: body.optimizer ?? 'COBYLA',
+        maxIter: body.maxIterations ?? 100,
+        tol: 1e-6,
+      },
+      shots: body.shots,
+    };
+
+    const result = await this.ml.runVQE(config);
     return {
-      batchId: `batch-${Date.now()}`,
-      circuits: body.circuitIds.length,
-      status: 'queued',
-      estimatedTime: body.circuitIds.length * 1000,
+      ansatz: body.ansatz,
+      minEnergy: result.minEnergy,
+      optimalParams: result.optimalParams,
+      iterations: result.iterations,
+      converged: result.converged,
     };
   }
 
-  /**
-   * Get batch results
-   */
-  @Get('batch/:batchId/results')
-  async getBatchResults(
-    @Param('batchId') batchId: string,
-    @Request() req: any,
-  ) {
-    return {
-      batchId,
-      status: 'completed',
-      results: [],
-      completedAt: new Date().toISOString(),
-    };
-  }
-
-  /**
-   * Create pipeline
-   */
-  @Post('pipeline/create')
-  async createPipeline(
-    @Body() body: {
-      name: string;
-      stages: Array<{ type: string; config: any }>;
-    },
-    @Request() req: any,
-  ) {
-    return {
-      pipelineId: `pipeline-${Date.now()}`,
-      name: body.name,
-      stages: body.stages.length,
-      status: 'created',
-    };
-  }
-
-  /**
-   * Run pipeline
-   */
-  @Post('pipeline/:pipelineId/run')
-  async runPipeline(
-    @Param('pipelineId') pipelineId: string,
-    @Body() body: { input: any },
-    @Request() req: any,
-  ) {
-    return {
-      pipelineId,
-      runId: `run-${Date.now()}`,
-      status: 'running',
-      input: body.input,
-    };
+  /** Compute a real quantum kernel matrix for the given data. */
+  @Post('ml/kernel/matrix')
+  async getKernelMatrix(@Body() body: { data: number[][]; featureMap?: string }) {
+    if (!Array.isArray(body.data) || body.data.length === 0) {
+      throw new BadRequestException('data must be a non-empty array of feature vectors');
+    }
+    const name = body.featureMap ?? this.ml.getAvailableFeatureMaps()[0];
+    const featureMap = this.ml.getFeatureMap(name);
+    if (!featureMap) {
+      throw new BadRequestException(`Unknown feature map "${name}"`);
+    }
+    const matrix = this.ml.computeKernelMatrix(body.data, featureMap);
+    return { featureMap: name, size: [body.data.length, body.data.length], matrix };
   }
 }
