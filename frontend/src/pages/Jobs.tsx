@@ -10,12 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { CircuitSelector, type ResolvedCircuit } from '@/components/CircuitSelector';
+import { BackendSelector } from '@/components/BackendSelector';
 import { SimulationResults } from '@/components/simulation/SimulationResults';
 import { useJobs, useSubmitJob, useCancelJob, useDeleteJob } from '@/api/hooks/useJobs';
-import type { Job, JobStatus, SimulationEngine, SimulationResult } from '@/types';
+import type { Job, JobStatus, SimulationResult } from '@/types';
 import { Play, X, Trash2, Clock, CheckCircle, XCircle, Loader2, Ban } from 'lucide-react';
-
-const ENGINES: SimulationEngine[] = ['auto', 'statevector', 'clifford', 'mps'];
 
 const STATUS_STYLE: Record<JobStatus, { icon: typeof Clock; className: string }> = {
   queued: { icon: Clock, className: 'text-muted-foreground' },
@@ -52,7 +51,7 @@ function StatusBadge({ status }: { status: JobStatus }) {
 
 export function Jobs() {
   const [circuit, setCircuit] = useState<ResolvedCircuit | null>(null);
-  const [engine, setEngine] = useState<SimulationEngine>('auto');
+  const [backendId, setBackendId] = useState<string | null>(null);
   const [shots, setShots] = useState(1024);
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -67,7 +66,9 @@ export function Jobs() {
       circuitName: circuit.name,
       numQubits: circuit.numQubits,
       operations: circuit.operations,
-      engine,
+      // A chosen backend takes precedence; "Auto" falls back to the default engine.
+      backendId: backendId ?? undefined,
+      engine: backendId ? undefined : 'auto',
       shots,
     });
   }
@@ -91,20 +92,7 @@ export function Jobs() {
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1fr_auto_auto_auto]">
           <CircuitSelector onChange={setCircuit} />
-          <div>
-            <label className="mb-2 block text-sm font-medium">Engine</label>
-            <select
-              className="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={engine}
-              onChange={(e) => setEngine(e.target.value as SimulationEngine)}
-            >
-              {ENGINES.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
-          </div>
+          <BackendSelector value={backendId} onChange={setBackendId} />
           <Input
             label="Shots"
             type="number"

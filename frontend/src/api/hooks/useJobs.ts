@@ -16,6 +16,8 @@ export interface SubmitJobInput {
   numQubits: number;
   operations?: SimulationOperation[];
   engine?: SimulationEngine;
+  /** Run on a specific backend; omit for the default runner. */
+  backendId?: string;
   shots?: number;
 }
 
