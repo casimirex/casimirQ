@@ -8,6 +8,7 @@
  * wired and still return placeholder responses.
  */
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -36,6 +37,8 @@ const NOISE_CHANNEL_TYPES = [
   'phase_flip',
 ] as const;
 
+@ApiTags('Advanced')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/advanced')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class AdvancedFeaturesController {

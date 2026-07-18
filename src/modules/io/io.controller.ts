@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { IOService } from './io.service';
 import { Circuit } from '../circuit-engine/circuit';
@@ -43,6 +44,7 @@ class ValidateDto {
  * Controller for circuit I/O API.
  * Provides endpoints for importing, exporting, and converting circuits.
  */
+@ApiTags('IO')
 @Controller('io')
 export class IOController {
   constructor(private readonly ioService: IOService) {}

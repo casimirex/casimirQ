@@ -9,6 +9,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { setupOpenApi } from './openapi';
 
 // Export core utilities
 export { Complex, COMPLEX_CONSTANTS } from './common/utils/complex';
@@ -80,6 +81,9 @@ async function bootstrap() {
 
   // Note: Controllers define their own paths with /api/v1 prefix
   // No global prefix needed
+
+  // Interactive API docs + OpenAPI JSON (served under /api/v1/docs).
+  setupOpenApi(app);
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

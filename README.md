@@ -139,6 +139,15 @@ build · test).
 All routes are under `/api/v1` and (except auth) require a
 `Authorization: Bearer <token>` header.
 
+Interactive API docs (Swagger UI) are served at **`/api/v1/docs`**, and the raw
+OpenAPI 3.0 document at **`/api/v1/docs-json`**. The spec is the versioned
+contract for every client — regenerate the committed [`openapi.json`](./openapi.json)
+with:
+
+```bash
+npm run openapi:generate
+```
+
 | Group | Base path | Purpose |
 | --- | --- | --- |
 | Auth | `/auth` | `login`, `signup`, `refresh`, `logout`, `me`, `validate` |
