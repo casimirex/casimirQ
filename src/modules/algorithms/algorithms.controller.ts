@@ -1,3 +1,4 @@
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -106,6 +107,8 @@ class ShorDto {
  * Controller for quantum algorithms API.
  * Provides endpoints for executing and analyzing quantum algorithms.
  */
+@ApiTags('Algorithms')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/algorithms')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class AlgorithmsController {

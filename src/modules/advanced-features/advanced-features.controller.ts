@@ -5,12 +5,14 @@
  * quantum machine learning, and multi-circuit execution.
  */
 
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
 import { ErrorCorrectionService } from './services/error-correction.service';
 import { NoiseModelingService } from './services/noise-modeling.service';
 import { QuantumMLService } from './services/quantum-ml.service';
 import { MultiCircuitExecutionService } from './services/multi-circuit-execution.service';
 
+@ApiTags('Advanced')
 @Controller('api/v1/advanced')
 export class AdvancedFeaturesController {
   constructor(

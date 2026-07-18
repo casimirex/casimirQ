@@ -5,6 +5,7 @@
  * Circuits are persisted per-user via CircuitsRepository.
  */
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -31,6 +32,8 @@ import {
 import { CircuitsRepository, StoredCircuit } from '../repositories/circuits.repository';
 import { SimulationsRepository } from '../repositories/simulations.repository';
 
+@ApiTags('Circuits')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/circuits')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class CircuitsController {

@@ -5,6 +5,7 @@
  * `GET /jobs/:id` for status, progress, and the result once it completes.
  */
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Body,
   Controller,
@@ -43,6 +44,8 @@ function toJobView(job: Job) {
   };
 }
 
+@ApiTags('Jobs')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/jobs')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class JobsController {

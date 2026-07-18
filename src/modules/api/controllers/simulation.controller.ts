@@ -5,6 +5,7 @@
  * circuits. Backed by SimulationsRepository (persisted per-user).
  */
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -25,6 +26,8 @@ import { SimulationRunnerService } from '../services/simulation-runner.service';
 import { CircuitsRepository } from '../repositories/circuits.repository';
 import { SimulationsRepository, StoredSimulation } from '../repositories/simulations.repository';
 
+@ApiTags('Simulations')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/simulations')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class SimulationController {

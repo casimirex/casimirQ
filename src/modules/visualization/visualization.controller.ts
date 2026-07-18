@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Res, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { VisualizationService } from './visualization.service';
@@ -45,6 +46,7 @@ class EntanglementGraphDto {
  * - Amplitude visualizations
  * - State transitions and animations
  */
+@ApiTags('Visualizations')
 @Controller('visualization')
 export class VisualizationController {
   constructor(private readonly visualizationService: VisualizationService) {}

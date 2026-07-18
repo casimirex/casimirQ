@@ -4,6 +4,7 @@
  * REST endpoints for user authentication
  */
 
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Post,
@@ -18,6 +19,7 @@ import {
 import { AuthService, UserCredentials } from '../services/auth.service';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
+@ApiTags('Auth')
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

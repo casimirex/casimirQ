@@ -6,6 +6,7 @@
  * set of named stages over a stored circuit). Per-user scoped.
  */
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -32,6 +33,8 @@ import { BatchesRepository, BatchEntry, StoredBatch } from '../repositories/batc
 const PIPELINE_STAGES = ['validate', 'optimize', 'diagram', 'simulate'] as const;
 type PipelineStageType = (typeof PIPELINE_STAGES)[number];
 
+@ApiTags('Advanced')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/advanced')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class AdvancedOrchestrationController {

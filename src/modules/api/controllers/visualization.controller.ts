@@ -6,6 +6,7 @@
  * 3D state from persisted simulation results.
  */
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -31,6 +32,8 @@ import { CircuitDiagramService } from '../../visualization/services/circuit-diag
 
 type Amplitude = { state: string; re: number; im: number; probability: number };
 
+@ApiTags('Visualizations')
+@ApiBearerAuth('bearer')
 @Controller('api/v1/visualizations')
 @UseGuards(JwtAuthGuard, RateLimitGuard)
 export class VisualizationController {
