@@ -18,6 +18,7 @@ import { AuthController } from './controllers/auth.controller';
 // Services
 import { AuthService } from './services/auth.service';
 import { SimulationRunnerService } from './services/simulation-runner.service';
+import { NoiseSimulationService } from './services/noise-simulation.service';
 
 // Repositories
 import { CircuitsRepository } from './repositories/circuits.repository';
@@ -77,6 +78,7 @@ import { JobsGateway } from './gateways/jobs.gateway';
   providers: [
     AuthService,
     SimulationRunnerService,
+    NoiseSimulationService,
     // Persistence backend: Postgres when DATABASE_URL is configured, otherwise
     // an in-memory store for local development and tests.
     {

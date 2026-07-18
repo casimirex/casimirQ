@@ -27,6 +27,8 @@ import {
   QuantumMLService,
 } from '../../advanced-features/services';
 import { IOptimizerConfig, IVQEConfig } from '../../advanced-features/interfaces';
+import { NoiseSimulationService } from '../services/noise-simulation.service';
+import { SimulateNoiseDto } from './dto/simulate-noise.dto';
 
 /** The noise channel primitives the NoiseModelingService supports. */
 const NOISE_CHANNEL_TYPES = [
@@ -46,6 +48,7 @@ export class AdvancedFeaturesController {
     private readonly errorCorrection: ErrorCorrectionService,
     private readonly noise: NoiseModelingService,
     private readonly ml: QuantumMLService,
+    private readonly noiseSimulation: NoiseSimulationService,
   ) {}
 
   // === Error Correction ===
@@ -140,6 +143,34 @@ export class AdvancedFeaturesController {
     return {
       model: body.model,
       characteristics: this.noise.generateDeviceCharacteristics(model),
+    };
+  }
+
+  /**
+   * Run a circuit under noise on the density-matrix engine.
+   *
+   * The configured channels are applied to each qubit a gate touches, after
+   * that gate. Returns the diagonal probabilities, sampled counts, the purity
+   * Tr(ρ²) (1 = pure, lower = more mixed), and optionally the fidelity against
+   * the noiseless state.
+   */
+  @Post('noise/simulate')
+  async simulateNoise(@Body() body: SimulateNoiseDto) {
+    const result = this.noiseSimulation.run({
+      spec: { numQubits: body.numQubits, operations: body.operations },
+      noise: body.noise,
+      shots: body.shots,
+      seed: body.seed,
+      computeFidelity: body.computeFidelity,
+    });
+    return {
+      engine: 'density-matrix',
+      numQubits: result.numQubits,
+      purity: result.purity,
+      fidelity: result.fidelity,
+      probabilities: result.probabilities,
+      counts: result.counts,
+      executionTimeMs: result.executionTimeMs,
     };
   }
 
