@@ -7,6 +7,7 @@ import { IOModule } from './modules/io/io.module';
 import { VisualizationModule } from './modules/visualization/visualization.module';
 import { ApiModule } from './modules/api/api.module';
 import { JobEngineModule } from './modules/job-engine/job-engine.module';
+import { BackendsModule } from './modules/backends/backends.module';
 
 /**
  * Root Application Module
@@ -27,6 +28,7 @@ import { JobEngineModule } from './modules/job-engine/job-engine.module';
     VisualizationModule,
     ApiModule,
     JobEngineModule,
+    BackendsModule,
   ],
 })
 export class AppModule {}
