@@ -19,6 +19,8 @@ import { Dashboard } from '@/pages/Dashboard';
 import { CircuitBuilder } from '@/pages/CircuitBuilder';
 import { Simulations } from '@/pages/Simulations';
 import { Algorithms } from '@/pages/Algorithms';
+import { Jobs } from '@/pages/Jobs';
+import { NoiseLab } from '@/pages/NoiseLab';
 import { Login } from '@/pages/Login';
 import { Signup } from '@/pages/Signup';
 import { NotFound } from '@/pages/NotFound';
@@ -77,6 +79,8 @@ function App() {
             <Route path="/circuits" element={<CircuitBuilder />} />
             <Route path="/circuits/:id" element={<CircuitBuilder />} />
             <Route path="/simulations" element={<Simulations />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/noise" element={<NoiseLab />} />
             <Route path="/algorithms" element={<Algorithms />} />
           </Route>
 

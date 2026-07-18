@@ -10,6 +10,8 @@ import {
   Cpu,
   Play,
   BookOpen,
+  ListChecks,
+  Activity,
   LogOut,
   User,
   Settings,
@@ -22,6 +24,8 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Circuit Builder', href: '/circuits', icon: Cpu },
   { name: 'Simulations', href: '/simulations', icon: Play },
+  { name: 'Jobs', href: '/jobs', icon: ListChecks },
+  { name: 'Noise Lab', href: '/noise', icon: Activity },
   { name: 'Algorithms', href: '/algorithms', icon: BookOpen },
 ];
 

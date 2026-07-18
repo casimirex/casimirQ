@@ -170,16 +170,51 @@ export interface LoginCredentials {
   password: string;
 }
 
-// Job types
+// Job types (async job engine)
+export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+/** The result payload of a completed simulation job. */
+export interface SimulationJobResult {
+  status: string;
+  numQubits: number;
+  requestedEngine: SimulationEngine;
+  shots: number;
+  results: SimulationResult['results'];
+  metadata: { executionTimeMs: number; memoryUsageBytes: number };
+}
+
 export interface Job {
   id: string;
-  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
   type: string;
+  status: JobStatus;
   progress: number;
+  result?: SimulationJobResult | null;
+  error?: string | null;
   createdAt: string;
-  completedAt?: string;
-  error?: string;
-  result?: unknown;
+  updatedAt: string;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+}
+
+export interface JobListResponse {
+  jobs: Job[];
+  total: number;
+}
+
+// Density-matrix noise simulation
+export interface NoiseChannelConfig {
+  type: 'depolarizing' | 'amplitude_damping' | 'phase_damping' | 'bit_flip' | 'phase_flip';
+  params: { p?: number; gamma?: number; lambda?: number };
+}
+
+export interface NoiseSimulationResult {
+  engine: string;
+  numQubits: number;
+  purity: number;
+  fidelity?: number;
+  probabilities: Record<string, number>;
+  counts: Record<string, number>;
+  executionTimeMs: number;
 }
 
 // Gate types
