@@ -161,6 +161,7 @@ npm run openapi:generate
 | Jobs | `/jobs` | **asynchronous** job engine: submit (202 → queued, optionally targeting a `backendId`), poll status/progress/result, cancel, delete |
 | Visualizations | `/visualizations` | Bloch sphere, circuit diagram (SVG), histogram, 3D state |
 | Backends | `/backends` | list execution targets (simulators, emulated/real hardware) and `:id/run` a circuit on one |
+| Transpiler | `/transpile` | decompose a circuit into a native gate basis (`rz`, `ry`, `cx`) |
 | Advanced | `/advanced` | error correction, noise, quantum ML; `batch/*`, `pipeline/*` |
 
 ## Project layout

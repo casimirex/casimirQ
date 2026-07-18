@@ -36,8 +36,9 @@ export class EmulatedHardwareBackend extends Backend {
     'linear connectivity, and baseline device noise. Emulated — not a real device.';
   readonly capabilities: BackendCapabilities = {
     maxQubits: 7,
-    // A superconducting-style native basis; anything else needs transpilation.
-    nativeGates: ['id', 'rz', 'sx', 'x', 'cx', 'cnot'],
+    // Native basis (matches the transpiler's target); anything else needs
+    // transpilation via POST /transpile.
+    nativeGates: ['id', 'rz', 'ry', 'cx', 'cnot'],
     supportsNoise: true,
     connectivity: 'linear',
     simulated: true,
