@@ -217,6 +217,28 @@ export interface NoiseSimulationResult {
   executionTimeMs: number;
 }
 
+// Execution backends
+export interface BackendCapabilities {
+  maxQubits: number;
+  nativeGates: string[];
+  supportsNoise: boolean;
+  connectivity: string;
+  simulated: boolean;
+}
+
+export interface Backend {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  available: boolean;
+  capabilities: BackendCapabilities;
+}
+
+export interface BackendListResponse {
+  backends: Backend[];
+}
+
 // Gate types
 export interface GateDefinition {
   name: string;
