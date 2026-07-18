@@ -287,3 +287,46 @@ export interface Modal {
   content: React.ReactNode;
   onClose?: () => void;
 }
+
+// Algorithms
+export type AlgorithmCategory =
+  | 'fundamental'
+  | 'search'
+  | 'optimization'
+  | 'cryptography';
+
+export interface AlgorithmSummary {
+  name: string;
+  description: string;
+  category: AlgorithmCategory;
+}
+
+export interface AlgorithmListResponse {
+  count: number;
+  algorithms: AlgorithmSummary[];
+}
+
+/** A single execution result (the `result` payload shape varies per algorithm). */
+export interface AlgorithmRunResponse {
+  algorithm: string;
+  parameters: Record<string, unknown>;
+  result: Record<string, unknown>;
+}
+
+/** A single weighted Pauli term acting on a set of qubits. */
+export interface PauliTerm {
+  coefficient: number;
+  paulis: string[];
+  qubits: number[];
+}
+
+/** A VQE example Hamiltonian is a sum of Pauli terms. */
+export type VqeExample = PauliTerm[];
+
+export interface QaoaExample {
+  n: number;
+  edges: [number, number][];
+}
+
+export type VqeExamplesResponse = { examples: Record<string, VqeExample> };
+export type QaoaExamplesResponse = { examples: Record<string, QaoaExample> };
