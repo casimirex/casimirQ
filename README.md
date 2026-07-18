@@ -104,6 +104,9 @@ Backend (environment variables):
 | `PGSSL` | _(unset)_ | Set to `true` to connect to Postgres over TLS. |
 | `SEED_DEMO_USERS` | _(unset)_ | Set to `false` to skip seeding the demo/admin accounts. |
 | `TEST_DATABASE_URL` | _(unset)_ | Enables the Postgres integration tests (and migrates that DB before the suite). |
+| `CASQ_REMOTE_QPU_URL` | _(unset)_ | Endpoint for the remote-QPU backend. Unset ⇒ that backend is listed but unavailable. |
+| `CASQ_REMOTE_QPU_TOKEN` | _(unset)_ | Bearer token for the remote-QPU backend. |
+| `CASQ_REMOTE_QPU_QUBITS` | `27` | Advertised qubit count of the remote-QPU backend. |
 
 Frontend (build-time):
 
@@ -157,6 +160,7 @@ npm run openapi:generate
 | Simulations | `/simulations` | run history, results |
 | Jobs | `/jobs` | **asynchronous** job engine: submit (202 → queued), poll status/progress/result, cancel, delete |
 | Visualizations | `/visualizations` | Bloch sphere, circuit diagram (SVG), histogram, 3D state |
+| Backends | `/backends` | list execution targets (simulators, emulated/real hardware) and `:id/run` a circuit on one |
 | Advanced | `/advanced` | error correction, noise, quantum ML; `batch/*`, `pipeline/*` |
 
 ## Project layout
