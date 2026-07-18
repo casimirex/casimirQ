@@ -1635,27 +1635,113 @@
     "schemas": {
       "QFTDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16
+          }
+        },
+        "required": [
+          "n"
+        ]
       },
       "GroverDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "markedItem": {
+            "type": "number",
+            "minimum": 0
+          },
+          "iterations": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "n",
+          "markedItem"
+        ]
       },
       "VQEDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "hamiltonian": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "maxIterations": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "n",
+          "hamiltonian"
+        ]
       },
       "QAOADto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "p": {
+            "type": "number",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "n",
+          "edges"
+        ]
       },
       "TeleportDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "alpha": {
+            "type": "number"
+          },
+          "beta": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "alpha",
+          "beta"
+        ]
       },
       "ShorDto": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "N": {
+            "type": "number",
+            "minimum": 2
+          }
+        },
+        "required": [
+          "N"
+        ]
       },
       "SimulateNoiseDto": {
         "type": "object",
