@@ -63,6 +63,8 @@ export class JobsController {
         shots: body.shots,
         seed: body.seed,
       },
+      backendId: body.backendId,
+      noise: body.noise,
     };
     const job = await this.jobs.submit(this.userId(req), { type: 'simulation', payload });
     return toJobView(job);
