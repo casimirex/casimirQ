@@ -11,16 +11,26 @@ import {
   NoiseModelingService,
   QuantumMLService,
 } from '../../../advanced-features/services';
+import { NoiseSimulationService } from '../../services/noise-simulation.service';
 
 describe('AdvancedFeaturesController', () => {
   let controller: AdvancedFeaturesController;
   let ec: ErrorCorrectionService;
   let ml: QuantumMLService;
+  let noiseSimRun: jest.Mock;
 
   beforeEach(() => {
     ec = new ErrorCorrectionService();
     ml = new QuantumMLService();
-    controller = new AdvancedFeaturesController(ec, new NoiseModelingService(), ml);
+    noiseSimRun = jest.fn().mockReturnValue({
+      numQubits: 1,
+      probabilities: { '0': 0.5, '1': 0.5 },
+      counts: { '0': 500, '1': 500 },
+      purity: 0.5,
+      executionTimeMs: 0.1,
+    });
+    const noiseSim = { run: noiseSimRun } as unknown as NoiseSimulationService;
+    controller = new AdvancedFeaturesController(ec, new NoiseModelingService(), ml, noiseSim);
   });
 
   describe('error correction', () => {
@@ -67,6 +77,19 @@ describe('AdvancedFeaturesController', () => {
       expect(result.channels[0].valid).toBe(true);
       expect(result.channels[1].valid).toBe(false);
       expect(result.allValid).toBe(false);
+    });
+
+    it('delegates density-matrix noise simulation to the service', async () => {
+      const res = await controller.simulateNoise({
+        numQubits: 1,
+        operations: [{ gate: 'x', targets: [0] }],
+        noise: [{ type: 'depolarizing', params: { p: 1 } }],
+        shots: 1000,
+      });
+      expect(noiseSimRun).toHaveBeenCalledTimes(1);
+      expect(res.engine).toBe('density-matrix');
+      expect(res.purity).toBe(0.5);
+      expect(res.probabilities).toEqual({ '0': 0.5, '1': 0.5 });
     });
 
     it('characterizes a real device model', async () => {

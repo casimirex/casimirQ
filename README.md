@@ -13,7 +13,9 @@ and a React UI.
 
 - **Simulation engines** — dense statevector, MPS, and Clifford (stabilizer)
   with automatic engine selection; exact statevector, probabilities and sampled
-  measurement counts.
+  measurement counts. A **density-matrix engine** runs circuits *under noise*
+  (Kraus channels: depolarizing, amplitude/phase damping, bit/phase flip) and
+  reports purity and fidelity.
 - **Circuits & history** — create/update/delete circuits and run simulations,
   all persisted per user; a batch runner and an analysis pipeline.
 - **Auth** — JWT (signature-verified) with bcrypt-hashed passwords and signup.
