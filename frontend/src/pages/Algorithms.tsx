@@ -1,169 +1,114 @@
 /**
  * Algorithms Page
- * Pre-built quantum algorithms library
+ *
+ * Library of the quantum algorithms the backend can execute. Each card runs the
+ * real `/algorithms/<slug>` endpoint via a parameter modal and shows the result.
  */
 
+import { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import {
-  BookOpen,
-  Play,
-  Copy,
-  Sparkles,
-  Binary,
-  Search,
-  Shield,
-  Key,
-} from 'lucide-react';
+import { Play, AlertCircle } from 'lucide-react';
+import { useAlgorithms } from '@/api/hooks/useAlgorithms';
+import { ALGORITHM_CATALOG, CATEGORY_LABELS, type AlgorithmSpec } from '@/lib/algorithmCatalog';
+import { AlgorithmRunner } from '@/components/algorithms/AlgorithmRunner';
+import type { AlgorithmCategory } from '@/types';
 
-const algorithms = [
-  {
-    id: 'deutsch-jozsa',
-    name: 'Deutsch-Jozsa Algorithm',
-    description: 'Determines if a function is constant or balanced with a single query.',
-    qubits: 3,
-    complexity: 'O(1)',
-    category: 'Oracular',
-    icon: Binary,
-  },
-  {
-    id: 'grover',
-    name: "Grover's Algorithm",
-    description: 'Searches an unsorted database with quadratic speedup.',
-    qubits: 4,
-    complexity: 'O(√N)',
-    category: 'Search',
-    icon: Search,
-  },
-  {
-    id: 'shor',
-    name: "Shor's Algorithm",
-    description: 'Factors integers exponentially faster than classical algorithms.',
-    qubits: 8,
-    complexity: 'O((log N)³)',
-    category: 'Cryptography',
-    icon: Key,
-  },
-  {
-    id: 'bb84',
-    name: 'BB84 Protocol',
-    description: 'Quantum key distribution for secure communication.',
-    qubits: 2,
-    complexity: 'O(1)',
-    category: 'Cryptography',
-    icon: Shield,
-  },
-  {
-    id: 'qft',
-    name: 'Quantum Fourier Transform',
-    description: 'Transform used in many quantum algorithms including Shor\'s.',
-    qubits: 4,
-    complexity: 'O(n²)',
-    category: 'Transform',
-    icon: Sparkles,
-  },
-  {
-    id: 'vqe',
-    name: 'Variational Quantum Eigensolver',
-    description: 'Hybrid algorithm for finding ground state energy of molecules.',
-    qubits: 6,
-    complexity: 'Iterative',
-    category: 'Chemistry',
-    icon: Sparkles,
-  },
+const CATEGORY_FILTERS: Array<'all' | AlgorithmCategory> = [
+  'all',
+  'fundamental',
+  'search',
+  'optimization',
+  'cryptography',
 ];
 
-const categories = ['All', 'Oracular', 'Search', 'Cryptography', 'Transform', 'Chemistry'];
-
 export function Algorithms() {
+  const [category, setCategory] = useState<'all' | AlgorithmCategory>('all');
+  const [active, setActive] = useState<AlgorithmSpec | null>(null);
+
+  // Availability comes from the backend so we only offer algorithms it can run.
+  const { data, isError } = useAlgorithms();
+  const availableNames = useMemo(
+    () => new Set((data?.algorithms ?? []).map((a) => a.name)),
+    [data],
+  );
+  const backendReady = data !== undefined;
+
+  const visible = ALGORITHM_CATALOG.filter(
+    (a) => category === 'all' || a.category === category,
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Quantum Algorithms</h1>
-          <p className="text-muted-foreground mt-1">
-            Pre-built algorithms to jumpstart your quantum computing journey
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Quantum Algorithms</h1>
+        <p className="mt-1 text-muted-foreground">
+          Run real quantum algorithms on the simulation engines and inspect their results.
+        </p>
       </div>
 
-      {/* Categories */}
+      {isError && (
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4" />
+          Couldn’t reach the algorithms service. You can still browse the catalog below.
+        </div>
+      )}
+
+      {/* Category filter */}
       <div className="flex flex-wrap gap-2">
-        {categories.map((cat) => (
+        {CATEGORY_FILTERS.map((cat) => (
           <Button
             key={cat}
-            variant={cat === 'All' ? 'default' : 'outline'}
+            variant={cat === category ? 'default' : 'outline'}
             size="sm"
+            onClick={() => setCategory(cat)}
           >
-            {cat}
+            {cat === 'all' ? 'All' : CATEGORY_LABELS[cat]}
           </Button>
         ))}
       </div>
 
       {/* Algorithm grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {algorithms.map((algo) => {
+        {visible.map((algo) => {
           const Icon = algo.icon;
+          // Once the backend has responded, disable anything it doesn't list.
+          const runnable = !backendReady || availableNames.has(algo.name);
           return (
-            <Card key={algo.id} className="glass hover:border-primary/50 transition-colors">
+            <Card key={algo.slug} className="glass transition-colors hover:border-primary/50">
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <span className="text-xs text-muted-foreground px-2 py-1 rounded-full bg-accent">
-                    {algo.category}
+                  <span className="rounded-full bg-accent px-2 py-1 text-xs text-muted-foreground">
+                    {CATEGORY_LABELS[algo.category]}
                   </span>
                 </div>
-                <CardTitle className="text-lg mt-3">{algo.name}</CardTitle>
+                <CardTitle className="mt-3 text-lg">{algo.name}</CardTitle>
                 <CardDescription>{algo.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                  <span>{algo.qubits} qubits</span>
+                <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
                   <span>Complexity: {algo.complexity}</span>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    leftIcon={<Copy className="h-4 w-4" />}
-                  >
-                    Copy
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="flex-1"
-                    leftIcon={<Play className="h-4 w-4" />}
-                  >
-                    Run
-                  </Button>
-                </div>
+                <Button
+                  className="w-full"
+                  size="sm"
+                  disabled={!runnable}
+                  leftIcon={<Play className="h-4 w-4" />}
+                  onClick={() => setActive(algo)}
+                >
+                  {runnable ? 'Run' : 'Unavailable'}
+                </Button>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Documentation link */}
-      <Card className="glass border-primary/20">
-        <CardContent className="flex items-center justify-between py-6">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold">Want to learn more?</h3>
-              <p className="text-sm text-muted-foreground">
-                Explore our documentation and tutorials on quantum algorithms
-              </p>
-            </div>
-          </div>
-          <Button variant="outline">View Documentation</Button>
-        </CardContent>
-      </Card>
+      {active && <AlgorithmRunner spec={active} onClose={() => setActive(null)} />}
     </div>
   );
 }

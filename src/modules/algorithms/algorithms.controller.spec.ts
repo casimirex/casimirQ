@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AlgorithmsController } from './algorithms.controller';
 import { AlgorithmsService } from './algorithms.service';
 import { SimulationEnginesModule } from '../simulation-engines/simulation-engines.module';
+import { JwtAuthGuard } from '../api/guards/jwt-auth.guard';
+import { RateLimitGuard } from '../api/guards/rate-limit.guard';
 
 describe('AlgorithmsController', () => {
   let controller: AlgorithmsController;
@@ -11,7 +13,13 @@ describe('AlgorithmsController', () => {
       imports: [SimulationEnginesModule],
       controllers: [AlgorithmsController],
       providers: [AlgorithmsService],
-    }).compile();
+    })
+      // The controller is guarded; stub the guards for these unit tests.
+      .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RateLimitGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get<AlgorithmsController>(AlgorithmsController);
   });

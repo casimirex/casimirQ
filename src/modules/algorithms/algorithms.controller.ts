@@ -1,11 +1,29 @@
-import { Controller, Get, Post, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { AlgorithmsService } from './algorithms.service';
 import { PauliTerm } from './implementations/vqe';
+import { JwtAuthGuard } from '../api/guards/jwt-auth.guard';
+import { RateLimitGuard } from '../api/guards/rate-limit.guard';
+import { IsArray, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+
+// Upper bound on qubit counts accepted by the API (matches the engines' limits).
+const MAX_QUBITS = 16;
 
 /**
  * DTO for QFT execution
  */
 class QFTDto {
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS)
   n!: number;
 }
 
@@ -13,8 +31,18 @@ class QFTDto {
  * DTO for Grover's search
  */
 class GroverDto {
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS)
   n!: number;
+
+  @IsInt()
+  @Min(0)
   markedItem!: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   iterations?: number;
 }
 
@@ -22,8 +50,17 @@ class GroverDto {
  * DTO for VQE
  */
 class VQEDto {
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS)
   n!: number;
+
+  @IsArray()
   hamiltonian!: PauliTerm[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   maxIterations?: number;
 }
 
@@ -31,8 +68,17 @@ class VQEDto {
  * DTO for QAOA
  */
 class QAOADto {
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS)
   n!: number;
+
+  @IsArray()
   edges!: [number, number][];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
   p?: number;
 }
 
@@ -40,7 +86,10 @@ class QAOADto {
  * DTO for Teleportation
  */
 class TeleportDto {
+  @IsNumber()
   alpha!: number;
+
+  @IsNumber()
   beta!: number;
 }
 
@@ -48,6 +97,8 @@ class TeleportDto {
  * DTO for Shor's algorithm
  */
 class ShorDto {
+  @IsInt()
+  @Min(2)
   N!: number;
 }
 
@@ -55,7 +106,8 @@ class ShorDto {
  * Controller for quantum algorithms API.
  * Provides endpoints for executing and analyzing quantum algorithms.
  */
-@Controller('algorithms')
+@Controller('api/v1/algorithms')
+@UseGuards(JwtAuthGuard, RateLimitGuard)
 export class AlgorithmsController {
   constructor(private readonly algorithmsService: AlgorithmsService) {}
 
@@ -83,12 +135,20 @@ export class AlgorithmsController {
   @HttpCode(HttpStatus.OK)
   async executeQFT(@Body() dto: QFTDto) {
     const result = this.algorithmsService.executeQFT(dto.n);
+    const output = result.output as {
+      analysis: { qubitCount: number; gateCount: number; depth: number };
+    };
+    // Surface a lightweight scalar summary rather than the full circuit and
+    // statevector objects (which are large and internal to the engine).
     return {
       algorithm: 'Quantum Fourier Transform',
       parameters: { n: dto.n },
       result: {
         executionTime: result.metrics.executionTimeMs,
-        output: result.output,
+        qubits: output.analysis.qubitCount,
+        gateCount: output.analysis.gateCount,
+        depth: output.analysis.depth,
+        stateSize: result.measurements.size,
       },
     };
   }

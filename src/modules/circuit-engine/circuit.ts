@@ -151,6 +151,18 @@ export class Circuit {
   }
 
   /**
+   * Apply a multi-controlled Z gate.
+   *
+   * Phase-flips the |1…1⟩ component: applies Z to `target` only when every
+   * qubit in `controls` is |1⟩. Generalizes cz (one control) and ccz to any
+   * number of controls. Since controlled-Z is symmetric in its qubits, the
+   * choice of which qubit is the `target` is immaterial.
+   */
+  mcz(controls: number[], target: number): Circuit {
+    return this.apply(new ZGate(), target, controls);
+  }
+
+  /**
    * Apply SWAP gate
    */
   swap(qubit1: number, qubit2: number): Circuit {
@@ -601,6 +613,14 @@ export class CircuitBuilder {
    */
   cz(control: number, target: number): CircuitBuilder {
     this.circuit = this.circuit.cz(control, target);
+    return this;
+  }
+
+  /**
+   * Apply a multi-controlled Z gate (generalized CZ over any number of controls).
+   */
+  mcz(controls: number[], target: number): CircuitBuilder {
+    this.circuit = this.circuit.mcz(controls, target);
     return this;
   }
 

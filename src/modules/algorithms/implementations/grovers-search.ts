@@ -210,31 +210,21 @@ export class GroversSearch implements IQuantumAlgorithm {
   }
 
   /**
-   * Apply multi-controlled Z gate.
-   * Decomposes using Toffoli gates and ancilla qubits.
+   * Apply a multi-controlled Z gate that phase-flips the |1…1⟩ component.
+   *
+   * Implements controlled^{n-1}-Z exactly (all n qubits act as controls/target
+   * of a single symmetric multi-controlled Z), so both the oracle and the
+   * diffusion reflection are performed correctly for any n. The base cases
+   * n ≤ 2 are handled by the callers (z / cz).
    */
   private applyMultiControlledZ(builder: CircuitBuilder, n: number): CircuitBuilder {
-    // For n qubits, we need to implement controlled^{n-1}-Z
-    // Using ancilla qubits: controlled^{n-1}-Z = cascade of Toffolis
-
     if (n <= 2) {
       // Base cases handled in caller
       return builder;
     }
 
-    // For simplicity, use a decomposition with ancilla
-    // Build controlled^n-1 Z using Toffoli gates
-    // This is a simplified version - full implementation would use ancilla
-
-    // For now, use a chain of controlled operations
-    // controlled-Z between pairs
-    for (let i = 0; i < n - 1; i++) {
-      // This is a simplified version
-      // Full multi-controlled Z would use more sophisticated decomposition
-      builder = (builder as CircuitBuilder).ccx(i, i + 1, (i + 2) % n);
-    }
-
-    return builder;
+    const controls = Array.from({ length: n - 1 }, (_, i) => i);
+    return builder.mcz(controls, n - 1);
   }
 
   /**

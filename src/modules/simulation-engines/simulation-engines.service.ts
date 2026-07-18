@@ -139,6 +139,14 @@ export class SimulationEnginesService {
     ]);
 
     for (const op of circuit.operations) {
+      // A gate with two or more controls (e.g. Toffoli/CCX, CCZ) is not a
+      // Clifford operation, regardless of its base gate type. The Clifford
+      // tableau can only represent CX/CZ (a single control), so anything with
+      // more controls must fall through to a universal engine.
+      if ((op.controls?.length ?? 0) >= 2) {
+        return false;
+      }
+
       if (!cliffordGates.has(op.gate.type.toLowerCase())) {
         return false;
       }
