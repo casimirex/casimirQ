@@ -46,6 +46,17 @@ jobs:
       - run: npm run lint:ci
       - run: npm run typecheck
       - run: npm run build
+
+      # Fail if the committed OpenAPI spec has drifted from the code. Regenerate
+      # from the freshly-built dist and diff against the checked-in openapi.json.
+      - name: OpenAPI spec is up to date
+        run: |
+          node dist/scripts/generate-openapi.js
+          if ! git diff --exit-code openapi.json; then
+            echo "::error::openapi.json is stale — run 'npm run openapi:generate' and commit the result."
+            exit 1
+          fi
+
       - run: npm run test:ci
 
   frontend:
