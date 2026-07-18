@@ -10,7 +10,6 @@ export { ApiModule } from './api.module';
 // Controllers
 export { AuthController } from './controllers/auth.controller';
 export { CircuitsController } from './controllers/circuits.controller';
-export { JobsController } from './controllers/jobs.controller';
 export { SimulationController } from './controllers/simulation.controller';
 export { VisualizationController } from './controllers/visualization.controller';
 export { AdvancedFeaturesController } from './controllers/advanced-features.controller';

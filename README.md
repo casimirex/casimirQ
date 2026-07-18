@@ -144,7 +144,7 @@ All routes are under `/api/v1` and (except auth) require a
 | Auth | `/auth` | `login`, `signup`, `refresh`, `logout`, `me`, `validate` |
 | Circuits | `/circuits` | CRUD + `:id/simulate` |
 | Simulations | `/simulations` | run history, results |
-| Jobs | `/jobs` | simulation runs as jobs (status, logs, retry, delete) |
+| Jobs | `/jobs` | **asynchronous** job engine: submit (202 → queued), poll status/progress/result, cancel, delete |
 | Visualizations | `/visualizations` | Bloch sphere, circuit diagram (SVG), histogram, 3D state |
 | Advanced | `/advanced` | error correction, noise, quantum ML; `batch/*`, `pipeline/*` |
 

@@ -9,7 +9,6 @@ import { JwtModule } from '@nestjs/jwt';
 
 // Controllers
 import { CircuitsController } from './controllers/circuits.controller';
-import { JobsController } from './controllers/jobs.controller';
 import { SimulationController } from './controllers/simulation.controller';
 import { VisualizationController } from './controllers/visualization.controller';
 import { AdvancedFeaturesController } from './controllers/advanced-features.controller';
@@ -70,7 +69,6 @@ import { JobsGateway } from './gateways/jobs.gateway';
   controllers: [
     AuthController,
     CircuitsController,
-    JobsController,
     SimulationController,
     VisualizationController,
     AdvancedFeaturesController,
@@ -110,6 +108,15 @@ import { JobsGateway } from './gateways/jobs.gateway';
     QuantumMLService,
     CircuitOptimizerService,
   ],
-  exports: [AuthService, JwtAuthGuard, RateLimitGuard, VisualizationGateway, JobsGateway],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    RateLimitGuard,
+    VisualizationGateway,
+    JobsGateway,
+    // Exposed for the JobEngineModule (async job processing reuses these).
+    SimulationRunnerService,
+    SimulationsRepository,
+  ],
 })
 export class ApiModule {}
