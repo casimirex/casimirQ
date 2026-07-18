@@ -8,6 +8,7 @@
 
 import { IsArray, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { CircuitOperationSpec } from '../../api/services/simulation-runner.service';
+import { NoiseSpec } from '../../simulation-engines/engines/density-matrix-engine/density-matrix-engine';
 
 const MAX_QUBITS = 24;
 
@@ -28,6 +29,16 @@ export class SubmitSimulationJobDto {
   @IsOptional()
   @IsString()
   engine?: string;
+
+  /** Run on a specific backend (see `GET /backends`). Defaults to the runner. */
+  @IsOptional()
+  @IsString()
+  backendId?: string;
+
+  /** Noise channels, for backends that support them. */
+  @IsOptional()
+  @IsArray()
+  noise?: NoiseSpec[];
 
   @IsOptional()
   @IsInt()

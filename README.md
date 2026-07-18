@@ -158,7 +158,7 @@ npm run openapi:generate
 | Auth | `/auth` | `login`, `signup`, `refresh`, `logout`, `me`, `validate` |
 | Circuits | `/circuits` | CRUD + `:id/simulate` |
 | Simulations | `/simulations` | run history, results |
-| Jobs | `/jobs` | **asynchronous** job engine: submit (202 → queued), poll status/progress/result, cancel, delete |
+| Jobs | `/jobs` | **asynchronous** job engine: submit (202 → queued, optionally targeting a `backendId`), poll status/progress/result, cancel, delete |
 | Visualizations | `/visualizations` | Bloch sphere, circuit diagram (SVG), histogram, 3D state |
 | Backends | `/backends` | list execution targets (simulators, emulated/real hardware) and `:id/run` a circuit on one |
 | Advanced | `/advanced` | error correction, noise, quantum ML; `batch/*`, `pipeline/*` |

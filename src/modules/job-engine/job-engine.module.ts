@@ -11,6 +11,8 @@ import { Module } from '@nestjs/common';
 import { ApiModule } from '../api/api.module';
 import { SimulationRunnerService } from '../api/services/simulation-runner.service';
 import { SimulationsRepository } from '../api/repositories/simulations.repository';
+import { BackendsModule } from '../backends/backends.module';
+import { BackendRegistry } from '../backends/backend-registry.service';
 
 import { JobsRepository } from './ports/jobs-repository.port';
 import { JobQueue } from './ports/job-queue.port';
@@ -23,7 +25,7 @@ import { SimulationJobProcessor } from './application/simulation-job.processor';
 import { JobsController } from './interface/jobs.controller';
 
 @Module({
-  imports: [ApiModule],
+  imports: [ApiModule, BackendsModule],
   controllers: [JobsController],
   providers: [
     // Storage adapter: Postgres when configured, otherwise in-memory.
@@ -37,9 +39,12 @@ import { JobsController } from './interface/jobs.controller';
     // Processors handling each job type.
     {
       provide: SimulationJobProcessor,
-      useFactory: (runner: SimulationRunnerService, sims: SimulationsRepository) =>
-        new SimulationJobProcessor(runner, sims),
-      inject: [SimulationRunnerService, SimulationsRepository],
+      useFactory: (
+        runner: SimulationRunnerService,
+        sims: SimulationsRepository,
+        backends: BackendRegistry,
+      ) => new SimulationJobProcessor(runner, sims, backends),
+      inject: [SimulationRunnerService, SimulationsRepository, BackendRegistry],
     },
     {
       provide: JOB_PROCESSORS,
