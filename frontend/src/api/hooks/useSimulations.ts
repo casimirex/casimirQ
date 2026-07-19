@@ -2,7 +2,7 @@
  * Simulation history API hooks
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/api/client';
 import type { SimulationListResponse, SimulationRunDetail } from '@/types';
 
@@ -30,5 +30,18 @@ export function useSimulation(id: string | null) {
       return api.get<SimulationRunDetail>(`/simulations/${id}`);
     },
     enabled: !!id,
+  });
+}
+
+/**
+ * Delete a simulation run from history.
+ */
+export function useDeleteSimulation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<void>(`/simulations/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [SIMULATIONS_KEY] });
+    },
   });
 }

@@ -10,6 +10,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
   Query,
@@ -127,6 +128,18 @@ export class SimulationController {
     });
 
     return toDetail(record);
+  }
+
+  /**
+   * Delete a simulation run from history.
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSimulation(@Param('id') id: string, @Request() req: any) {
+    const deleted = await this.simulations.delete(this.userId(req), id);
+    if (!deleted) {
+      throw new NotFoundException(`Simulation ${id} not found`);
+    }
   }
 
   private userId(req: any): string {

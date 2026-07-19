@@ -117,4 +117,40 @@ describe('SimulationController', () => {
       );
     });
   });
+
+  describe('deleteSimulation', () => {
+    it('removes a run from history', async () => {
+      const circuit = await circuits.create('user-1', {
+        name: 'Bell',
+        numQubits: 2,
+        operations: bellOps,
+      });
+      const run = await controller.runSimulation({ circuitId: circuit.id }, req);
+
+      await controller.deleteSimulation(run.id, req);
+
+      const list = await controller.listSimulations(req, 1, 20);
+      expect(list.simulations).toHaveLength(0);
+      await expect(controller.getSimulation(run.id, req)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws 404 for a missing simulation', async () => {
+      await expect(controller.deleteSimulation('nope', req)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('does not delete another user’s run', async () => {
+      const circuit = await circuits.create('user-1', { name: 'A', numQubits: 1 });
+      const run = await controller.runSimulation({ circuitId: circuit.id }, req);
+
+      // A different user cannot delete it…
+      await expect(controller.deleteSimulation(run.id, otherReq)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      // …and the owner's run is untouched.
+      const detail = await controller.getSimulation(run.id, req);
+      expect(detail.id).toBe(run.id);
+    });
+  });
 });

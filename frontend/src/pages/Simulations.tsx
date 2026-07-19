@@ -5,12 +5,12 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useSimulations, useSimulation } from '@/api/hooks/useSimulations';
+import { useSimulations, useSimulation, useDeleteSimulation } from '@/api/hooks/useSimulations';
 import { SimulationResults } from '@/components/simulation/SimulationResults';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import type { SimulationRunSummary, SimulationResult } from '@/types';
-import { Play, CheckCircle, XCircle, Cpu, Clock } from 'lucide-react';
+import { Play, CheckCircle, XCircle, Cpu, Clock, Trash2 } from 'lucide-react';
 
 /** Adapt a stored run's detail into the shape SimulationResults expects. */
 function toResultProps(detail: {
@@ -39,6 +39,12 @@ export function Simulations() {
   const { data, isLoading } = useSimulations(1, 50);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: selected } = useSimulation(selectedId);
+  const remove = useDeleteSimulation();
+
+  const handleDelete = (id: string) => {
+    if (id === selectedId) setSelectedId(null);
+    remove.mutate(id);
+  };
 
   const runs = data?.simulations ?? [];
   const total = data?.pagination.total ?? runs.length;
@@ -133,6 +139,15 @@ export function Simulations() {
                       onClick={() => setSelectedId(run.id === selectedId ? null : run.id)}
                     >
                       {run.id === selectedId ? 'Hide' : 'View'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Delete simulation"
+                      disabled={remove.isPending}
+                      onClick={() => handleDelete(run.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
