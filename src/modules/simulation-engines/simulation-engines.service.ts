@@ -121,7 +121,8 @@ export class SimulationEnginesService {
    * Check if circuit contains only Clifford gates
    */
   private isCliffordCircuit(circuit: Circuit): boolean {
-    const cliffordGates = new Set([
+    // Clifford operations with no controls the tableau can represent directly.
+    const cliffordSingleQubit = new Set([
       'i',
       'id',
       'x',
@@ -130,24 +131,28 @@ export class SimulationEnginesService {
       'h',
       's',
       'sdg',
-      'cx',
-      'cnot',
-      'cz',
       'swap',
       'measure',
       'barrier',
     ]);
 
     for (const op of circuit.operations) {
-      // A gate with two or more controls (e.g. Toffoli/CCX, CCZ) is not a
-      // Clifford operation, regardless of its base gate type. The Clifford
-      // tableau can only represent CX/CZ (a single control), so anything with
-      // more controls must fall through to a universal engine.
-      if ((op.controls?.length ?? 0) >= 2) {
-        return false;
+      const type = op.gate.type.toLowerCase();
+      const controls = op.controls?.length ?? 0;
+
+      if (controls > 0) {
+        // The Clifford tableau only implements single-controlled X (CNOT) and
+        // Z (CZ). Any other controlled gate — a controlled SWAP (Fredkin), CY,
+        // CH, controlled-phase, or anything with ≥2 controls (CCX/CCZ) — must
+        // fall through to a universal engine, or the tableau would reject it.
+        const isControlledClifford = controls === 1 && (type === 'x' || type === 'cnot' || type === 'z');
+        if (!isControlledClifford) {
+          return false;
+        }
+        continue;
       }
 
-      if (!cliffordGates.has(op.gate.type.toLowerCase())) {
+      if (!cliffordSingleQubit.has(type)) {
         return false;
       }
     }
