@@ -163,6 +163,16 @@ export class Circuit {
   }
 
   /**
+   * Apply a multi-controlled X gate (generalized CNOT / Toffoli).
+   *
+   * Flips `target` only when every qubit in `controls` is |1⟩. Generalizes cx
+   * (one control) and ccx (two controls) to any number of controls.
+   */
+  mcx(controls: number[], target: number): Circuit {
+    return this.apply(new XGate(), target, controls);
+  }
+
+  /**
    * Apply SWAP gate
    */
   swap(qubit1: number, qubit2: number): Circuit {
@@ -621,6 +631,14 @@ export class CircuitBuilder {
    */
   mcz(controls: number[], target: number): CircuitBuilder {
     this.circuit = this.circuit.mcz(controls, target);
+    return this;
+  }
+
+  /**
+   * Apply a multi-controlled X gate (generalized CNOT / Toffoli).
+   */
+  mcx(controls: number[], target: number): CircuitBuilder {
+    this.circuit = this.circuit.mcx(controls, target);
     return this;
   }
 

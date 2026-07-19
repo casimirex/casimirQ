@@ -71,7 +71,15 @@ const GATE_ALIASES: Record<string, string> = {
   fredkin: 'cswap',
   phase: 'p',
   id: 'i',
+  ccz: 'mcz',
 };
+
+/**
+ * Multi-controlled gates. In the JSON spec their controls are folded into
+ * `targets` (like ccx/cswap): every qubit but the last is a control, the last is
+ * the target. The builder methods take `(controls[], target)`.
+ */
+const MULTI_CONTROLLED = new Set(['mcx', 'mcz']);
 
 /** Builder methods that represent applicable gates/operations. */
 const SUPPORTED_GATES = new Set([
@@ -98,6 +106,8 @@ const SUPPORTED_GATES = new Set([
   'crx',
   'cry',
   'crz',
+  'mcx',
+  'mcz',
   'measure',
   'barrier',
 ]);
@@ -158,6 +168,20 @@ export class SimulationRunnerService {
         if (gateName === 'measure' || gateName === 'barrier') {
           // These take a targets array directly rather than spread args.
           builder = (method as (t: number[]) => typeof builder).call(builder, targets);
+        } else if (MULTI_CONTROLLED.has(gateName)) {
+          // Controls are folded into targets: [...controls, target].
+          if (targets.length < 2) {
+            throw new BadRequestException(
+              `Operation ${index} (${op.gate}) needs at least one control and a target`,
+            );
+          }
+          const controls = targets.slice(0, -1);
+          const target = targets[targets.length - 1];
+          builder = (method as (c: number[], t: number) => typeof builder).call(
+            builder,
+            controls,
+            target,
+          );
         } else {
           builder = (method as (...a: number[]) => typeof builder).call(
             builder,

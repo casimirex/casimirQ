@@ -116,4 +116,83 @@ describe('SimulationRunnerService', () => {
       expect(() => runner.run({ numQubits: 100 })).toThrow(BadRequestException);
     });
   });
+
+  describe('multi-controlled gates', () => {
+    // Controls are folded into targets: [...controls, target].
+    it('mcx flips the target only when all controls are set', () => {
+      // 3 controls all set -> target flips.
+      const set = runner.run(
+        {
+          numQubits: 4,
+          operations: [
+            { gate: 'x', targets: [0] },
+            { gate: 'x', targets: [1] },
+            { gate: 'x', targets: [2] },
+            { gate: 'mcx', targets: [0, 1, 2, 3] },
+          ],
+        },
+        { shots: 0 },
+      ).results.probabilities;
+      expect(set['1111']).toBeCloseTo(1, 6);
+
+      // One control unset -> no flip.
+      const unset = runner.run(
+        {
+          numQubits: 4,
+          operations: [
+            { gate: 'x', targets: [0] },
+            { gate: 'x', targets: [1] },
+            { gate: 'mcx', targets: [0, 1, 2, 3] },
+          ],
+        },
+        { shots: 0 },
+      ).results.probabilities;
+      expect(unset['0011']).toBeCloseTo(1, 6); // q0=1,q1=1,q2=0,q3=0
+    });
+
+    it('ccz (alias of a 2-control mcz) negates only the all-ones amplitude', () => {
+      const sv = runner.run(
+        {
+          numQubits: 3,
+          operations: [
+            { gate: 'h', targets: [0] },
+            { gate: 'h', targets: [1] },
+            { gate: 'h', targets: [2] },
+            { gate: 'ccz', targets: [0, 1, 2] },
+          ],
+        },
+        { shots: 0 },
+      ).results.statevector;
+
+      const amp = Object.fromEntries(sv.map((a) => [a.state, a.re]));
+      const inv = 1 / Math.sqrt(8);
+      expect(amp['111']).toBeCloseTo(-inv, 6); // phase-flipped
+      expect(amp['000']).toBeCloseTo(inv, 6); // untouched
+    });
+
+    it('mcz matches the phase of ccz for two controls', () => {
+      const run = (gate: string) =>
+        runner.run(
+          {
+            numQubits: 3,
+            operations: [
+              { gate: 'h', targets: [0] },
+              { gate: 'h', targets: [1] },
+              { gate: 'h', targets: [2] },
+              { gate, targets: [0, 1, 2] },
+            ],
+          },
+          { shots: 0 },
+        ).results.statevector;
+      const amp = (sv: { state: string; re: number }[], s: string) =>
+        sv.find((a) => a.state === s)!.re;
+      expect(amp(run('mcz'), '111')).toBeCloseTo(amp(run('ccz'), '111'), 6);
+    });
+
+    it('rejects a multi-controlled gate without a control', () => {
+      expect(() =>
+        runner.run({ numQubits: 1, operations: [{ gate: 'mcx', targets: [0] }] }),
+      ).toThrow(BadRequestException);
+    });
+  });
 });
