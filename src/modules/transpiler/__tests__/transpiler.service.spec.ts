@@ -39,6 +39,18 @@ describe('TranspilerService', () => {
       .probabilities;
   }
 
+  /** Full complex statevector, as a state -> {re, im} map. */
+  function amplitudes(
+    numQubits: number,
+    operations: CircuitOperationSpec[],
+  ): Record<string, { re: number; im: number }> {
+    const sv = runner.run({ numQubits, operations }, { engine: 'statevector', shots: 1 }).results
+      .statevector;
+    const map: Record<string, { re: number; im: number }> = {};
+    for (const a of sv) map[a.state] = { re: a.re, im: a.im };
+    return map;
+  }
+
   /** Assert the transpiled circuit measures identically to the original. */
   function assertEquivalent(numQubits: number, operations: CircuitOperationSpec[]) {
     const result = transpiler.transpile({ numQubits, operations });
@@ -48,6 +60,31 @@ describe('TranspilerService', () => {
     for (const s of states) {
       expect(after[s] ?? 0).toBeCloseTo(before[s] ?? 0, 6);
     }
+    return result;
+  }
+
+  /**
+   * Stronger than `assertEquivalent`: compares full complex amplitudes via state
+   * fidelity |⟨before|after⟩|, which is 1 iff the states are equal up to an
+   * (invisible) global phase. Unlike a probability check this catches *relative*
+   * phase errors — the kind a controlled-phase decomposition can introduce.
+   */
+  function assertStatevectorEquivalent(numQubits: number, operations: CircuitOperationSpec[]) {
+    const result = transpiler.transpile({ numQubits, operations });
+    const before = amplitudes(numQubits, operations);
+    const after = amplitudes(numQubits, result.operations);
+    const states = new Set([...Object.keys(before), ...Object.keys(after)]);
+    let re = 0;
+    let im = 0;
+    for (const s of states) {
+      const b = before[s] ?? { re: 0, im: 0 };
+      const a = after[s] ?? { re: 0, im: 0 };
+      // ⟨before|after⟩ = Σ conj(b)·a
+      re += b.re * a.re + b.im * a.im;
+      im += b.re * a.im - b.im * a.re;
+    }
+    const fidelity = Math.hypot(re, im);
+    expect(fidelity).toBeCloseTo(1, 6);
     return result;
   }
 
@@ -121,13 +158,57 @@ describe('TranspilerService', () => {
     }
   });
 
+  it('decomposes controlled single-qubit gates via the ABC identity', () => {
+    // Put the control in superposition and the target in a phase-sensitive state,
+    // so a wrong relative phase would change the full statevector. cp in
+    // particular only differs from identity by a relative phase.
+    const prep: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'h', targets: [1] },
+      { gate: 't', targets: [1] },
+    ];
+    const cases: CircuitOperationSpec[] = [
+      { gate: 'cy', targets: [0, 1] },
+      { gate: 'ch', targets: [0, 1] },
+      { gate: 'cp', targets: [0, 1], params: [0.5] },
+      { gate: 'cp', targets: [0, 1], params: [Math.PI] }, // = cz
+      { gate: 'crx', targets: [0, 1], params: [0.8] },
+      { gate: 'cry', targets: [0, 1], params: [1.3] },
+      { gate: 'crz', targets: [0, 1], params: [1.9] },
+    ];
+    for (const gate of cases) {
+      const result = assertStatevectorEquivalent(2, [...prep, gate]);
+      expect(isNative(result)).toBe(true);
+      expect(result.fullyNative).toBe(true);
+    }
+  });
+
+  it('transpiles a full QFT (which needs controlled-phase) to native gates', () => {
+    // A 3-qubit QFT is built from H and controlled-phase rotations — the exact
+    // pattern that used to fall through as unsupported.
+    const qft: CircuitOperationSpec[] = [
+      { gate: 'x', targets: [0] },
+      { gate: 'h', targets: [0] },
+      { gate: 'cp', targets: [1, 0], params: [Math.PI / 2] },
+      { gate: 'cp', targets: [2, 0], params: [Math.PI / 4] },
+      { gate: 'h', targets: [1] },
+      { gate: 'cp', targets: [2, 1], params: [Math.PI / 2] },
+      { gate: 'h', targets: [2] },
+      { gate: 'swap', targets: [0, 2] },
+    ];
+    const result = assertStatevectorEquivalent(3, qft);
+    expect(isNative(result)).toBe(true);
+    expect(result.fullyNative).toBe(true);
+  });
+
   it('flags gates it cannot decompose but keeps the circuit runnable', () => {
-    // Controlled-phase is not yet supported; it should pass through and be flagged.
+    // Fredkin (controlled-SWAP) is not yet supported; it should pass through and
+    // be flagged rather than silently mis-decomposed.
     const result = transpiler.transpile({
-      numQubits: 2,
+      numQubits: 3,
       operations: [
         { gate: 'h', targets: [0] },
-        { gate: 'cp', targets: [0, 1], params: [0.5] },
+        { gate: 'cswap', targets: [0, 1, 2] },
       ],
     });
     expect(result.fullyNative).toBe(false);

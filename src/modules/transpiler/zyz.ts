@@ -24,6 +24,13 @@ export interface ZyzAngles {
   alpha: number;
   beta: number;
   gamma: number;
+  /**
+   * The discarded global phase φ, such that `U = e^{iφ}·Rz(alpha)Ry(beta)Rz(gamma)`.
+   * Invisible to measurement for a plain single-qubit gate, but for a *controlled*
+   * gate it becomes a real relative phase on the control, so callers that build
+   * controlled-U decompositions need it.
+   */
+  phase: number;
 }
 
 function mag(z: Complex2): number {
@@ -64,6 +71,7 @@ export function zyzAngles(m: Matrix2): ZyzAngles {
     alpha: argC - argA,
     beta,
     gamma: -argC - argA,
+    phase: halfPhase,
   };
 }
 
