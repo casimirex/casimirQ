@@ -249,3 +249,218 @@ export function routeCircuit(
     swapCount,
   };
 }
+
+// --- SABRE lookahead router ---
+
+/** Lookahead weight for the extended set (SABRE `W`). */
+const SABRE_W = 0.5;
+/** Per-swap decay increment, discouraging repeatedly swapping the same qubits. */
+const SABRE_DECAY = 0.001;
+/** Max gates in the lookahead (extended) set. */
+const SABRE_EXTENDED_SIZE = 20;
+
+/** Whether an op is a two-qubit gate that must act on coupled qubits. */
+function needsRouting(op: CircuitOperationSpec): boolean {
+  const t = op.targets ?? [];
+  return t.length === 2 && op.gate !== 'measure' && op.gate !== 'barrier';
+}
+
+/**
+ * Route a native circuit onto a coupling graph with a SABRE-style lookahead
+ * (Li, Ding & Xie 2019). Rather than walking one operand of each gate to the
+ * other in isolation (see `routeCircuit`), it maintains a *front layer* of gates
+ * whose predecessors have all executed and, when none can run, inserts the SWAP
+ * that most reduces a distance heuristic across the front layer plus a decayed
+ * lookahead window — so a single SWAP can serve several upcoming gates.
+ *
+ * The heuristic for a candidate SWAP is
+ *   score = max(decay[u], decay[v]) · [ mean_{g∈F} dist(g) + W·mean_{g∈E} dist(g) ]
+ * evaluated with the SWAP tentatively applied; `decay` rises for recently-swapped
+ * qubits to break oscillation. A greedy fallback guarantees forward progress.
+ */
+export function routeCircuitSabre(
+  operations: CircuitOperationSpec[],
+  numQubits: number,
+  coupling: CouplingMap,
+  initialLayout?: number[],
+): RouteResult {
+  const adj = adjacency(numQubits, coupling);
+  const dist = Array.from({ length: numQubits }, (_, p) => bfsDistances(adj, p));
+
+  const layout = initialLayout ?? Array.from({ length: numQubits }, (_, i) => i);
+  const loc = layout.slice();
+  const inv = new Array<number>(numQubits);
+  for (let l = 0; l < numQubits; l++) inv[loc[l]] = l;
+
+  const ops = operations;
+  const n = ops.length;
+
+  // Dependency DAG: within each qubit's timeline, consecutive gates are ordered.
+  const chains: number[][] = Array.from({ length: numQubits }, () => []);
+  ops.forEach((op, i) => {
+    for (const q of op.targets ?? []) chains[q].push(i);
+  });
+  const inDegree = new Array<number>(n).fill(0);
+  const succ = new Map<number, Array<[number, number]>>(); // op -> [(qubit, nextOp)]
+  for (let q = 0; q < numQubits; q++) {
+    const chain = chains[q];
+    for (let k = 0; k < chain.length; k++) {
+      const i = chain[k];
+      if (k > 0) inDegree[i]++;
+      if (k + 1 < chain.length) {
+        const list = succ.get(i) ?? [];
+        list.push([q, chain[k + 1]]);
+        succ.set(i, list);
+      }
+    }
+  }
+
+  const front = new Set<number>();
+  for (let i = 0; i < n; i++) if (inDegree[i] === 0) front.add(i);
+
+  const out: CircuitOperationSpec[] = [];
+  let swapCount = 0;
+  const decay = new Array<number>(numQubits).fill(1);
+  let swapsSinceExec = 0;
+
+  const applyLocSwap = (u: number, v: number) => {
+    const lu = inv[u];
+    const lv = inv[v];
+    inv[u] = lv;
+    inv[v] = lu;
+    loc[lu] = v;
+    loc[lv] = u;
+  };
+  const emitSwap = (u: number, v: number) => {
+    out.push(
+      { gate: 'cx', targets: [u, v] },
+      { gate: 'cx', targets: [v, u] },
+      { gate: 'cx', targets: [u, v] },
+    );
+    applyLocSwap(u, v);
+    swapCount++;
+    decay[u] += SABRE_DECAY;
+    decay[v] += SABRE_DECAY;
+    swapsSinceExec++;
+  };
+  const executable = (g: number): boolean => {
+    const op = ops[g];
+    if (!needsRouting(op)) return true;
+    const [a, b] = op.targets;
+    return dist[loc[a]][loc[b]] === 1;
+  };
+  const executeReady = (): boolean => {
+    const ready = [...front].filter(executable).sort((x, y) => x - y);
+    if (ready.length === 0) return false;
+    for (const g of ready) {
+      const t = ops[g].targets ?? [];
+      out.push({ ...ops[g], targets: t.map((q) => loc[q]) });
+      front.delete(g);
+      for (const [, nx] of succ.get(g) ?? []) {
+        if (--inDegree[nx] === 0) front.add(nx);
+      }
+    }
+    decay.fill(1);
+    swapsSinceExec = 0;
+    return true;
+  };
+  const extendedSet = (): number[] => {
+    const e: number[] = [];
+    const seen = new Set<number>();
+    const queue = [...front];
+    while (queue.length > 0 && e.length < SABRE_EXTENDED_SIZE) {
+      for (const [, nx] of succ.get(queue.shift() as number) ?? []) {
+        if (seen.has(nx)) continue;
+        seen.add(nx);
+        if (needsRouting(ops[nx])) e.push(nx);
+        queue.push(nx);
+      }
+    }
+    return e;
+  };
+  const heuristic = (extended: number[]): number => {
+    let h = 0;
+    let cnt = 0;
+    for (const g of front) {
+      if (!needsRouting(ops[g])) continue;
+      const [a, b] = ops[g].targets;
+      h += dist[loc[a]][loc[b]];
+      cnt++;
+    }
+    if (cnt > 0) h /= cnt;
+    if (extended.length > 0) {
+      let e = 0;
+      for (const g of extended) {
+        const [a, b] = ops[g].targets;
+        e += dist[loc[a]][loc[b]];
+      }
+      h += SABRE_W * (e / extended.length);
+    }
+    return h;
+  };
+  const forceRoute = (g: number) => {
+    // Greedy fallback: walk one operand along a shortest path. Guarantees the
+    // gate becomes adjacent, so the router always makes progress.
+    const [a, b] = ops[g].targets;
+    let path = shortestPath(adj, loc[b], loc[a]);
+    if (path === null) {
+      throw new Error(`coupling graph does not connect qubits ${a} and ${b}`);
+    }
+    while (path.length > 2) {
+      emitSwap(loc[b], path[1]);
+      path = shortestPath(adj, loc[b], loc[a]) as number[];
+    }
+  };
+
+  while (front.size > 0) {
+    if (executeReady()) continue;
+
+    const frontRouting = [...front].filter((g) => needsRouting(ops[g]));
+
+    // Safety valve: if lookahead is thrashing, force one gate through greedily.
+    if (swapsSinceExec > numQubits * numQubits) {
+      forceRoute(frontRouting[0]);
+      swapsSinceExec = 0;
+      continue;
+    }
+
+    // Candidate SWAPs: coupling edges incident to a front gate's operands.
+    const candidates = new Map<string, [number, number]>();
+    for (const g of frontRouting) {
+      for (const lq of ops[g].targets) {
+        const p = loc[lq];
+        for (const nb of adj[p]) {
+          const key = p < nb ? `${p}-${nb}` : `${nb}-${p}`;
+          candidates.set(key, [Math.min(p, nb), Math.max(p, nb)]);
+        }
+      }
+    }
+
+    const extended = extendedSet();
+    let best: [number, number] | null = null;
+    let bestScore = Infinity;
+    for (const [u, v] of candidates.values()) {
+      applyLocSwap(u, v);
+      const score = Math.max(decay[u], decay[v]) * heuristic(extended);
+      applyLocSwap(u, v); // revert
+      if (score < bestScore - 1e-12) {
+        bestScore = score;
+        best = [u, v];
+      }
+    }
+
+    if (best === null) {
+      forceRoute(frontRouting[0]);
+      swapsSinceExec = 0;
+      continue;
+    }
+    emitSwap(best[0], best[1]);
+  }
+
+  return {
+    operations: out,
+    initialLayout: layout.slice(),
+    finalPermutation: loc.slice(),
+    swapCount,
+  };
+}

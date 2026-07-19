@@ -359,6 +359,70 @@ describe('TranspilerService', () => {
     }
   });
 
+  it('SABRE router inserts fewer SWAPs than greedy via lookahead', () => {
+    // On a line 0—1—2, greedy routes cx(0,2) by moving q2 next to q0, which
+    // then drags cx(0,1) out of reach — 2 SWAPs. SABRE sees cx(0,1) in its
+    // lookahead and instead moves q0, so both gates run after a single SWAP.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cx', targets: [0, 2] },
+      { gate: 'cx', targets: [0, 1] },
+    ];
+    const greedy = transpiler.transpile(
+      { numQubits: 3, operations: ops },
+      { connectivity: 'linear', router: 'greedy' },
+    );
+    const sabre = transpiler.transpile(
+      { numQubits: 3, operations: ops },
+      { connectivity: 'linear', router: 'sabre' },
+    );
+
+    expect(greedy.swapCount).toBe(2);
+    expect(sabre.swapCount).toBe(1);
+    expect(sabre.swapCount!).toBeLessThan(greedy.swapCount!);
+    expect(isNative(sabre)).toBe(true);
+    expect(allTwoQubitGatesLinear(sabre.operations)).toBe(true);
+
+    // Equivalent to the original, under SABRE's final permutation.
+    const before = probabilities(3, ops);
+    const after = probabilities(3, sabre.operations);
+    for (const s of Object.keys(before)) {
+      const phys = logicalToPhysical(s, sabre.finalPermutation!, 3);
+      expect(after[phys] ?? 0).toBeCloseTo(before[s], 6);
+    }
+  });
+
+  it('SABRE routes a phase-sensitive circuit and stays equivalent', () => {
+    // A QFT-like body (H + controlled-phase) on a line, plus a long-range gate.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cp', targets: [3, 0], params: [Math.PI / 2] },
+      { gate: 'cx', targets: [1, 3] },
+      { gate: 'h', targets: [2] },
+      { gate: 'cx', targets: [0, 3] },
+    ];
+    const sabre = transpiler.transpile(
+      { numQubits: 4, operations: ops },
+      { connectivity: 'linear', router: 'sabre', layout: 'greedy' },
+    );
+    expect(isNative(sabre)).toBe(true);
+    expect(allTwoQubitGatesLinear(sabre.operations)).toBe(true);
+
+    const before = amplitudes(4, ops);
+    const after = amplitudes(4, sabre.operations);
+    // Full-statevector fidelity under the permutation (phase-sensitive).
+    let re = 0;
+    let im = 0;
+    for (const s of new Set([...Object.keys(before), ...Object.keys(after)])) {
+      const b = before[s] ?? { re: 0, im: 0 };
+      const phys = logicalToPhysical(s, sabre.finalPermutation!, 4);
+      const a = after[phys] ?? { re: 0, im: 0 };
+      re += b.re * a.re + b.im * a.im;
+      im += b.re * a.im - b.im * a.re;
+    }
+    expect(Math.hypot(re, im)).toBeCloseTo(1, 6);
+  });
+
   it('does not route when connectivity is all-to-all', () => {
     const ops: CircuitOperationSpec[] = [{ gate: 'cx', targets: [0, 2] }];
     const result = transpiler.transpile(
