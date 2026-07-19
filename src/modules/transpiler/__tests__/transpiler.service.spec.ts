@@ -299,6 +299,66 @@ describe('TranspilerService', () => {
     }
   });
 
+  it('greedy layout cuts SWAPs and stays equivalent (cx(0,2) on a line)', () => {
+    // With the identity layout, cx(0,2) needs a SWAP. A greedy layout can seat
+    // logical 0 and 2 on adjacent wires so no SWAP is needed at all.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cx', targets: [0, 2] },
+    ];
+    const trivial = transpiler.transpile(
+      { numQubits: 3, operations: ops },
+      { connectivity: 'linear', layout: 'trivial' },
+    );
+    const greedy = transpiler.transpile(
+      { numQubits: 3, operations: ops },
+      { connectivity: 'linear', layout: 'greedy' },
+    );
+
+    expect(trivial.swapCount).toBe(1);
+    expect(greedy.swapCount).toBe(0);
+    expect(greedy.swapCount!).toBeLessThan(trivial.swapCount!);
+    expect(greedy.initialLayout).toBeDefined();
+    expect(isNative(greedy)).toBe(true);
+    expect(allTwoQubitGatesLinear(greedy.operations)).toBe(true);
+
+    // Still exactly equivalent, accounting for the (now non-identity) layout.
+    const before = probabilities(3, ops);
+    const after = probabilities(3, greedy.operations);
+    for (const s of Object.keys(before)) {
+      const phys = logicalToPhysical(s, greedy.finalPermutation!, 3);
+      expect(after[phys] ?? 0).toBeCloseTo(before[s], 6);
+    }
+  });
+
+  it('greedy layout never increases SWAPs on a star of interactions', () => {
+    // A "hub" logical qubit 2 interacts with 0, 1, 3, 4 on a 5-line. Greedy
+    // should seat the hub centrally and do no worse than the identity.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [2] },
+      { gate: 'cx', targets: [2, 0] },
+      { gate: 'cx', targets: [2, 1] },
+      { gate: 'cx', targets: [2, 3] },
+      { gate: 'cx', targets: [2, 4] },
+    ];
+    const trivial = transpiler.transpile(
+      { numQubits: 5, operations: ops },
+      { connectivity: 'linear', layout: 'trivial' },
+    );
+    const greedy = transpiler.transpile(
+      { numQubits: 5, operations: ops },
+      { connectivity: 'linear', layout: 'greedy' },
+    );
+    expect(greedy.swapCount!).toBeLessThanOrEqual(trivial.swapCount!);
+
+    const before = probabilities(5, ops);
+    const after = probabilities(5, greedy.operations);
+    for (const s of Object.keys(before)) {
+      const phys = logicalToPhysical(s, greedy.finalPermutation!, 5);
+      expect(after[phys] ?? 0).toBeCloseTo(before[s], 6);
+    }
+  });
+
   it('does not route when connectivity is all-to-all', () => {
     const ops: CircuitOperationSpec[] = [{ gate: 'cx', targets: [0, 2] }];
     const result = transpiler.transpile(

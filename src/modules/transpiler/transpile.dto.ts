@@ -33,4 +33,13 @@ export class TranspileDto {
   @IsOptional()
   @IsArray()
   coupling?: Array<[number, number]>;
+
+  /**
+   * Initial-placement strategy when routing. `'greedy'` seats interacting
+   * qubits near each other to cut SWAPs; `'trivial'` (default) starts from the
+   * identity placement.
+   */
+  @IsOptional()
+  @IsIn(['trivial', 'greedy'])
+  layout?: 'trivial' | 'greedy';
 }

@@ -28,6 +28,8 @@ export type CouplingMap = Array<[number, number]>;
 export interface RouteResult {
   /** The routed circuit — every two-qubit gate acts on coupled physical qubits. */
   operations: CircuitOperationSpec[];
+  /** `initialLayout[logical] = physical` qubit it started on (before any SWAP). */
+  initialLayout: number[];
   /** `finalPermutation[logical] = physical` qubit holding it after routing. */
   finalPermutation: number[];
   /** Number of SWAPs inserted (each expands to 3 `cx`). */
@@ -81,6 +83,103 @@ function shortestPath(adj: number[][], src: number, dst: number): number[] | nul
   return null;
 }
 
+/** Shortest-path distances from `src` to every physical qubit (BFS). */
+function bfsDistances(adj: number[][], src: number): number[] {
+  const dist = new Array<number>(adj.length).fill(Infinity);
+  dist[src] = 0;
+  const queue = [src];
+  while (queue.length > 0) {
+    const q = queue.shift() as number;
+    for (const n of adj[q]) {
+      if (dist[n] === Infinity) {
+        dist[n] = dist[q] + 1;
+        queue.push(n);
+      }
+    }
+  }
+  return dist;
+}
+
+/**
+ * Symmetric interaction weights: `weight[a][b]` counts the two-qubit gates
+ * acting on logical qubits `a` and `b`. This is the graph routing must satisfy —
+ * qubits that interact a lot want to sit close together on the device.
+ */
+function interactionWeights(operations: CircuitOperationSpec[], numQubits: number): number[][] {
+  const w = Array.from({ length: numQubits }, () => new Array<number>(numQubits).fill(0));
+  for (const op of operations) {
+    const t = op.targets ?? [];
+    if (t.length === 2) {
+      w[t[0]][t[1]]++;
+      w[t[1]][t[0]]++;
+    }
+  }
+  return w;
+}
+
+/**
+ * Choose an initial logical→physical layout that places interacting qubits near
+ * each other, so routing has fewer SWAPs to insert. A greedy heuristic (not
+ * guaranteed optimal): seat the busiest logical qubit on the most central
+ * physical qubit, then place the rest one at a time, each on the free physical
+ * qubit that minimizes its weighted distance to already-placed partners.
+ *
+ * Returns `layout[logical] = physical`. Falls back to the identity when the
+ * circuit has no two-qubit gates (nothing to optimize).
+ */
+export function chooseInitialLayout(
+  numQubits: number,
+  coupling: CouplingMap,
+  operations: CircuitOperationSpec[],
+): number[] {
+  const weight = interactionWeights(operations, numQubits);
+  const degree = weight.map((row) => row.reduce((a, b) => a + b, 0));
+  if (degree.every((d) => d === 0)) {
+    return Array.from({ length: numQubits }, (_, i) => i);
+  }
+
+  const adj = adjacency(numQubits, coupling);
+  const dist = Array.from({ length: numQubits }, (_, p) => bfsDistances(adj, p));
+  // Centrality: smaller total distance to all other qubits = more central.
+  const centrality = dist.map((row) => row.reduce((a, b) => a + (b === Infinity ? 0 : b), 0));
+
+  // Place busiest logical qubits first (tie-break by index for determinism).
+  const order = Array.from({ length: numQubits }, (_, i) => i).sort(
+    (a, b) => degree[b] - degree[a] || a - b,
+  );
+
+  const layout = new Array<number>(numQubits).fill(-1);
+  const placed: number[] = [];
+  const used = new Array<boolean>(numQubits).fill(false);
+
+  for (const q of order) {
+    let best = -1;
+    let bestCost = Infinity;
+    for (let p = 0; p < numQubits; p++) {
+      if (used[p]) continue;
+      // Weighted distance from candidate p to every already-placed partner.
+      let cost = 0;
+      for (const l of placed) {
+        const d = dist[p][layout[l]];
+        cost += weight[q][l] * (d === Infinity ? numQubits : d);
+      }
+      // Tie-break toward more central seats, then lower physical index.
+      if (
+        cost < bestCost ||
+        (cost === bestCost && best !== -1 && centrality[p] < centrality[best])
+      ) {
+        best = p;
+        bestCost = cost;
+      }
+    }
+    layout[q] = best;
+    used[best] = true;
+    placed.push(q);
+  }
+
+  return layout;
+}
+
 /**
  * Route a native circuit onto a coupling graph, inserting SWAPs so that every
  * two-qubit gate acts on coupled qubits.
@@ -89,12 +188,16 @@ export function routeCircuit(
   operations: CircuitOperationSpec[],
   numQubits: number,
   coupling: CouplingMap,
+  initialLayout?: number[],
 ): RouteResult {
   const adj = adjacency(numQubits, coupling);
 
-  // loc[logical] = current physical location; inv is its inverse.
-  const loc = Array.from({ length: numQubits }, (_, i) => i);
-  const inv = Array.from({ length: numQubits }, (_, i) => i);
+  // loc[logical] = current physical location; inv is its inverse. Start from the
+  // given initial layout (identity when none is provided).
+  const layout = initialLayout ?? Array.from({ length: numQubits }, (_, i) => i);
+  const loc = layout.slice();
+  const inv = new Array<number>(numQubits);
+  for (let l = 0; l < numQubits; l++) inv[loc[l]] = l;
 
   const out: CircuitOperationSpec[] = [];
   let swapCount = 0;
@@ -139,5 +242,10 @@ export function routeCircuit(
     out.push({ ...op, targets: [loc[a], loc[b]] });
   }
 
-  return { operations: out, finalPermutation: loc.slice(), swapCount };
+  return {
+    operations: out,
+    initialLayout: layout.slice(),
+    finalPermutation: loc.slice(),
+    swapCount,
+  };
 }
