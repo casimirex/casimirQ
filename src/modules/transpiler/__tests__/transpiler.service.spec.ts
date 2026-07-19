@@ -369,17 +369,33 @@ describe('TranspilerService', () => {
     expect(result.finalPermutation).toBeUndefined();
   });
 
-  it('flags gates it cannot decompose but keeps the circuit runnable', () => {
-    // Fredkin (controlled-SWAP) is not yet supported; it should pass through and
-    // be flagged rather than silently mis-decomposed.
+  it('decomposes the Fredkin (controlled-SWAP) gate', () => {
+    // For every (control, a, b) basis input, the transpiled cswap must swap a,b
+    // iff the control is set — verified against the original for all inputs.
+    for (let input = 0; input < 8; input++) {
+      const prep: CircuitOperationSpec[] = [];
+      if (input & 0b100) prep.push({ gate: 'x', targets: [0] }); // control
+      if (input & 0b010) prep.push({ gate: 'x', targets: [1] }); // a
+      if (input & 0b001) prep.push({ gate: 'x', targets: [2] }); // b
+      const result = assertEquivalent(3, [...prep, { gate: 'cswap', targets: [0, 1, 2] }]);
+      expect(result.fullyNative).toBe(true);
+      expect(isNative(result)).toBe(true);
+    }
+  });
+
+  it('leaves nothing unsupported for any gate the API accepts', () => {
+    // Every controlled/multi-target gate in the supported set now decomposes.
     const result = transpiler.transpile({
       numQubits: 3,
       operations: [
         { gate: 'h', targets: [0] },
         { gate: 'cswap', targets: [0, 1, 2] },
+        { gate: 'ccx', targets: [0, 1, 2] },
+        { gate: 'cp', targets: [0, 1], params: [0.7] },
       ],
     });
-    expect(result.fullyNative).toBe(false);
-    expect(result.unsupported.length).toBeGreaterThan(0);
+    expect(result.fullyNative).toBe(true);
+    expect(result.unsupported).toEqual([]);
+    expect(isNative(result)).toBe(true);
   });
 });

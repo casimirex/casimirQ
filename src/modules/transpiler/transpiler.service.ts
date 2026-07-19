@@ -28,6 +28,7 @@ import {
 } from '../api/services/simulation-runner.service';
 import { Matrix2, normalizeAngle, zyzAngles } from './zyz';
 import { buildLinearCoupling, chooseInitialLayout, CouplingMap, routeCircuit } from './routing';
+import { controlledUOps, cx, multiControlledUOps, singleQubitOps, toMatrix2 } from './controlled';
 
 /** The native basis this transpiler targets. */
 export const NATIVE_BASIS = ['id', 'rz', 'ry', 'cx'];
@@ -107,6 +108,9 @@ export class TranspilerService {
         out.push(...this.decomposeSingleQubit(op.gate.matrix, targets[0]));
       } else if (controls.length === 0 && targets.length === 2 && type === 'swap') {
         out.push(...this.decomposeSwap(targets[0], targets[1]));
+      } else if (controls.length === 1 && type === 'swap' && targets.length === 2) {
+        // Controlled-SWAP (Fredkin): CX·CCX·CX.
+        out.push(...this.decomposeCswap(controls[0], targets[0], targets[1]));
       } else if (controls.length === 1 && type === 'x') {
         out.push(cx(controls[0], targets[0])); // cx is native
       } else if (controls.length === 1 && type === 'z') {
@@ -116,7 +120,12 @@ export class TranspilerService {
         // or an arbitrary controlled-U — one general identity covers them all.
         out.push(...this.decomposeControlledU(op.gate.matrix, controls[0], targets[0]));
       } else if (controls.length === 2 && type === 'x') {
-        out.push(...this.decomposeToffoli(controls[0], controls[1], targets[0]));
+        out.push(...this.decomposeToffoli(controls[0], controls[1], targets[0])); // optimized CCX
+      } else if (controls.length >= 2 && targets.length === 1) {
+        // Any other multi-controlled single-qubit gate (ccz, cccx, …): general
+        // recursive decomposition. Not currently reachable via the API gate set,
+        // but keeps the transpiler total over any number of controls.
+        out.push(...multiControlledUOps(controls, toMatrix2(op.gate.matrix), targets[0]));
       } else {
         // Unsupported: keep the original operation and flag it.
         unsupported.add(controls.length > 0 ? `c${type}` : type);
@@ -172,58 +181,31 @@ export class TranspilerService {
     matrix: { get(r: number, c: number): { re: number; im: number } },
     q: number,
   ): CircuitOperationSpec[] {
-    const m: Matrix2 = [
-      [entry(matrix, 0, 0), entry(matrix, 0, 1)],
-      [entry(matrix, 1, 0), entry(matrix, 1, 1)],
-    ];
-    const { alpha, beta, gamma } = zyzAngles(m);
-    // U ∝ Rz(alpha) Ry(beta) Rz(gamma); applied order is gamma, beta, alpha.
-    const ops: CircuitOperationSpec[] = [];
-    pushRotation(ops, 'rz', gamma, q);
-    pushRotation(ops, 'ry', beta, q);
-    pushRotation(ops, 'rz', alpha, q);
-    return ops;
+    return singleQubitOps(toMatrix2(matrix), q);
   }
 
   /**
    * Decompose a singly-controlled single-qubit gate `controlled-U` into native
-   * gates via the standard ABC identity (Nielsen & Chuang §4.3).
-   *
-   * Write the target unitary — *including its global phase* — as
-   *   U = e^{iφ}·Rz(α)·Ry(β)·Rz(γ).
-   * Then define
-   *   A = Rz(α)·Ry(β/2),  B = Ry(−β/2)·Rz(−(γ+α)/2),  C = Rz((γ−α)/2),
-   * so that A·B·C = I and A·X·B·X·C = Rz(α)Ry(β)Rz(γ). The controlled gate is
-   *   [phase(φ) on control] · A(t) · CX · B(t) · CX · C(t),
-   * which fires U on the target exactly when the control is |1⟩. For a plain
-   * `cp(θ)` this reduces to the textbook controlled-phase; the φ term is what
-   * carries the phase that makes `cp` (and thus QFT) work.
+   * gates via the standard ABC identity (Nielsen & Chuang §4.3). See
+   * `controlledUOps` in controlled.ts for the derivation; the φ (global-phase)
+   * term is what carries the relative phase that makes `cp` — and thus QFT —
+   * work.
    */
   private decomposeControlledU(
     matrix: { get(r: number, c: number): { re: number; im: number } },
     control: number,
     target: number,
   ): CircuitOperationSpec[] {
-    const m: Matrix2 = [
-      [entry(matrix, 0, 0), entry(matrix, 0, 1)],
-      [entry(matrix, 1, 0), entry(matrix, 1, 1)],
-    ];
-    const { alpha, beta, gamma, phase } = zyzAngles(m);
+    return controlledUOps(toMatrix2(matrix), control, target);
+  }
 
-    const ops: CircuitOperationSpec[] = [];
-    // C = Rz((γ−α)/2)
-    pushRotation(ops, 'rz', (gamma - alpha) / 2, target);
-    ops.push(cx(control, target));
-    // B = Ry(−β/2)·Rz(−(γ+α)/2)  → apply Rz first, then Ry.
-    pushRotation(ops, 'rz', -(gamma + alpha) / 2, target);
-    pushRotation(ops, 'ry', -beta / 2, target);
-    ops.push(cx(control, target));
-    // A = Rz(α)·Ry(β/2)  → apply Ry first, then Rz.
-    pushRotation(ops, 'ry', beta / 2, target);
-    pushRotation(ops, 'rz', alpha, target);
-    // phase(φ) on the control ≡ Rz(φ) up to a (global, invisible) phase.
-    pushRotation(ops, 'rz', phase, control);
-    return ops;
+  /**
+   * Controlled-SWAP (Fredkin): `CSWAP(c,a,b) = CX(a,b)·CCX(c,b,a)·CX(a,b)`. The
+   * outer CX turns the swap into a controlled-parity that the Toffoli conditions
+   * on the control, so a,b are exchanged exactly when the control is |1⟩.
+   */
+  private decomposeCswap(control: number, a: number, b: number): CircuitOperationSpec[] {
+    return [cx(a, b), ...this.decomposeToffoli(control, b, a), cx(a, b)];
   }
 
   /** Native operations equivalent to a Hadamard on `q`. */
@@ -279,19 +261,6 @@ export class TranspilerService {
     ops.push(cx(c1, c2));
     return ops;
   }
-}
-
-function entry(
-  matrix: { get(r: number, c: number): { re: number; im: number } },
-  r: number,
-  c: number,
-): { re: number; im: number } {
-  const e = matrix.get(r, c);
-  return { re: e.re, im: e.im };
-}
-
-function cx(control: number, target: number): CircuitOperationSpec {
-  return { gate: 'cx', targets: [control, target] };
 }
 
 /** Append a rotation op, skipping angles that are effectively zero. */
