@@ -27,9 +27,18 @@ import {
   SimulationRunnerService,
 } from '../api/services/simulation-runner.service';
 import { Matrix2, normalizeAngle, zyzAngles } from './zyz';
+import { buildLinearCoupling, CouplingMap, routeCircuit } from './routing';
 
 /** The native basis this transpiler targets. */
 export const NATIVE_BASIS = ['id', 'rz', 'ry', 'cx'];
+
+/** Optional hardware constraints to transpile against. */
+export interface TranspileOptions {
+  /** Qubit connectivity to route onto (mirrors a backend's capability). */
+  connectivity?: 'all-to-all' | 'linear';
+  /** An explicit coupling map, taking precedence over `connectivity`. */
+  coupling?: CouplingMap;
+}
 
 export interface TranspileResult {
   /** The circuit rewritten into (mostly) native gates. */
@@ -43,6 +52,14 @@ export interface TranspileResult {
   fullyNative: boolean;
   /** Gate types that could not be decomposed (passed through unchanged). */
   unsupported: string[];
+  /**
+   * Present when the circuit was routed onto a coupling graph.
+   * `finalPermutation[logical] = physical` qubit that holds it afterwards; read
+   * a measurement of logical qubit `l` from physical `finalPermutation[l]`.
+   */
+  finalPermutation?: number[];
+  /** Number of SWAPs inserted by routing (each is `3×cx`). */
+  swapCount?: number;
 }
 
 const T = Math.PI / 4;
@@ -51,7 +68,7 @@ const T = Math.PI / 4;
 export class TranspilerService {
   constructor(private readonly runner: SimulationRunnerService) {}
 
-  transpile(spec: CircuitSpec): TranspileResult {
+  transpile(spec: CircuitSpec, options: TranspileOptions = {}): TranspileResult {
     // Build the circuit so we have each gate's matrix, type, and controls. The
     // built operations correspond 1:1 to the spec operations, in order.
     const circuit = this.runner.buildCircuit(spec);
@@ -92,6 +109,23 @@ export class TranspilerService {
       }
     });
 
+    // Optionally route onto a coupling graph so every two-qubit gate acts on
+    // physically-coupled qubits (see routing.ts).
+    const coupling = this.resolveCoupling(spec.numQubits, options);
+    if (coupling) {
+      const routed = routeCircuit(out, spec.numQubits, coupling);
+      return {
+        operations: routed.operations,
+        basis: NATIVE_BASIS,
+        originalGateCount: circuit.operations.length,
+        transpiledGateCount: routed.operations.length,
+        fullyNative: unsupported.size === 0,
+        unsupported: [...unsupported],
+        finalPermutation: routed.finalPermutation,
+        swapCount: routed.swapCount,
+      };
+    }
+
     return {
       operations: out,
       basis: NATIVE_BASIS,
@@ -100,6 +134,17 @@ export class TranspilerService {
       fullyNative: unsupported.size === 0,
       unsupported: [...unsupported],
     };
+  }
+
+  /**
+   * Resolve the coupling map to route against, or `null` for no routing
+   * (all-to-all connectivity). An explicit `coupling` wins; otherwise
+   * `connectivity: 'linear'` builds the line graph for the circuit's width.
+   */
+  private resolveCoupling(numQubits: number, options: TranspileOptions): CouplingMap | null {
+    if (options.coupling && options.coupling.length > 0) return options.coupling;
+    if (options.connectivity === 'linear') return buildLinearCoupling(numQubits);
+    return null;
   }
 
   /** Decompose a single-qubit unitary (as a matrix) into rz/ry via ZYZ. */

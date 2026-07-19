@@ -16,12 +16,12 @@ import { TranspileDto } from './transpile.dto';
 export class TranspilerController {
   constructor(private readonly transpiler: TranspilerService) {}
 
-  /** Decompose a circuit into the native gate basis. */
+  /** Decompose a circuit into the native gate basis, optionally routing it. */
   @Post()
   transpile(@Body() body: TranspileDto) {
-    return this.transpiler.transpile({
-      numQubits: body.numQubits,
-      operations: body.operations,
-    });
+    return this.transpiler.transpile(
+      { numQubits: body.numQubits, operations: body.operations },
+      { connectivity: body.connectivity, coupling: body.coupling },
+    );
   }
 }

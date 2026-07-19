@@ -201,6 +201,114 @@ describe('TranspilerService', () => {
     expect(result.fullyNative).toBe(true);
   });
 
+  /**
+   * Translate a logical measurement bitstring into the physical bitstring the
+   * routed circuit produces, using the reported final permutation. The runner
+   * serializes state so that string index `n-1-q` is qubit `q`.
+   */
+  function logicalToPhysical(s: string, perm: number[], n: number): string {
+    const bits = new Array<string>(n).fill('0');
+    for (let l = 0; l < n; l++) {
+      bits[n - 1 - perm[l]] = s[n - 1 - l];
+    }
+    return bits.join('');
+  }
+
+  /** True when every two-qubit gate acts on qubits adjacent on the line. */
+  function allTwoQubitGatesLinear(operations: CircuitOperationSpec[]): boolean {
+    return operations.every(
+      (op) => op.targets.length < 2 || Math.abs(op.targets[0] - op.targets[1]) === 1,
+    );
+  }
+
+  it('routes a non-adjacent CX onto a linear coupling with SWAPs', () => {
+    // cx(0,2) can't run on a line 0—1—2; routing must insert a SWAP.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cx', targets: [0, 2] },
+    ];
+    const result = transpiler.transpile({ numQubits: 3, operations: ops }, { connectivity: 'linear' });
+
+    expect(result.swapCount).toBeGreaterThan(0);
+    expect(isNative(result)).toBe(true);
+    expect(allTwoQubitGatesLinear(result.operations)).toBe(true);
+
+    // Equivalence, accounting for the final qubit permutation.
+    const before = probabilities(3, ops);
+    const after = probabilities(3, result.operations);
+    for (const s of Object.keys(before)) {
+      const phys = logicalToPhysical(s, result.finalPermutation!, 3);
+      expect(after[phys] ?? 0).toBeCloseTo(before[s], 6);
+    }
+  });
+
+  it('leaves an already-adjacent circuit unrouted (identity permutation)', () => {
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cx', targets: [0, 1] },
+    ];
+    const result = transpiler.transpile({ numQubits: 2, operations: ops }, { connectivity: 'linear' });
+    expect(result.swapCount).toBe(0);
+    expect(result.finalPermutation).toEqual([0, 1]);
+  });
+
+  it('routes a GHZ chain of long-range gates and stays equivalent', () => {
+    // Entangle 0 with 3 and 0 with 4 on a 5-qubit line — several SWAPs.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cx', targets: [0, 3] },
+      { gate: 'cx', targets: [0, 4] },
+    ];
+    const result = transpiler.transpile({ numQubits: 5, operations: ops }, { connectivity: 'linear' });
+    expect(result.swapCount).toBeGreaterThan(0);
+    expect(allTwoQubitGatesLinear(result.operations)).toBe(true);
+
+    const before = probabilities(5, ops);
+    const after = probabilities(5, result.operations);
+    for (const s of Object.keys(before)) {
+      const phys = logicalToPhysical(s, result.finalPermutation!, 5);
+      expect(after[phys] ?? 0).toBeCloseTo(before[s], 6);
+    }
+  });
+
+  it('routes onto an explicit (non-linear) coupling map', () => {
+    // A star: center qubit 0 couples to 1, 2, 3. A cx(1,2) must route through 0.
+    const ops: CircuitOperationSpec[] = [
+      { gate: 'h', targets: [1] },
+      { gate: 'cx', targets: [1, 2] },
+    ];
+    const star: Array<[number, number]> = [
+      [0, 1],
+      [0, 2],
+      [0, 3],
+    ];
+    const result = transpiler.transpile({ numQubits: 4, operations: ops }, { coupling: star });
+    expect(result.swapCount).toBeGreaterThan(0);
+
+    const adjacent = (a: number, b: number) =>
+      star.some(([x, y]) => (x === a && y === b) || (x === b && y === a));
+    expect(
+      result.operations.every((op) => op.targets.length < 2 || adjacent(op.targets[0], op.targets[1])),
+    ).toBe(true);
+
+    const before = probabilities(4, ops);
+    const after = probabilities(4, result.operations);
+    for (const s of Object.keys(before)) {
+      const phys = logicalToPhysical(s, result.finalPermutation!, 4);
+      expect(after[phys] ?? 0).toBeCloseTo(before[s], 6);
+    }
+  });
+
+  it('does not route when connectivity is all-to-all', () => {
+    const ops: CircuitOperationSpec[] = [{ gate: 'cx', targets: [0, 2] }];
+    const result = transpiler.transpile(
+      { numQubits: 3, operations: ops },
+      { connectivity: 'all-to-all' },
+    );
+    expect(result.swapCount).toBeUndefined();
+    expect(result.finalPermutation).toBeUndefined();
+  });
+
   it('flags gates it cannot decompose but keeps the circuit runnable', () => {
     // Fredkin (controlled-SWAP) is not yet supported; it should pass through and
     // be flagged rather than silently mis-decomposed.
