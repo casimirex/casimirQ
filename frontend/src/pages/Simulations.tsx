@@ -5,10 +5,12 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useSimulations, useSimulation, useDeleteSimulation } from '@/api/hooks/useSimulations';
 import { SimulationResults } from '@/components/simulation/SimulationResults';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import type { SimulationRunSummary, SimulationResult } from '@/types';
 import { Play, CheckCircle, XCircle, Cpu, Clock, Trash2 } from 'lucide-react';
 
@@ -40,10 +42,19 @@ export function Simulations() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: selected } = useSimulation(selectedId);
   const remove = useDeleteSimulation();
+  const [pendingDelete, setPendingDelete] = useState<SimulationRunSummary | null>(null);
 
-  const handleDelete = (id: string) => {
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
     if (id === selectedId) setSelectedId(null);
-    remove.mutate(id);
+    remove.mutate(id, {
+      onSuccess: () => {
+        toast.success('Simulation deleted');
+        setPendingDelete(null);
+      },
+      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to delete'),
+    });
   };
 
   const runs = data?.simulations ?? [];
@@ -144,8 +155,7 @@ export function Simulations() {
                       variant="ghost"
                       size="sm"
                       aria-label="Delete simulation"
-                      disabled={remove.isPending}
-                      onClick={() => handleDelete(run.id)}
+                      onClick={() => setPendingDelete(run)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -166,6 +176,19 @@ export function Simulations() {
           <SimulationResults result={toResultProps(selected)} />
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete simulation?"
+        description={
+          pendingDelete
+            ? `This permanently removes the "${pendingDelete.circuitName}" run from your history.`
+            : undefined
+        }
+        busy={remove.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
