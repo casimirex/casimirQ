@@ -27,10 +27,17 @@ import {
   SimulationRunnerService,
 } from '../api/services/simulation-runner.service';
 import { Matrix2, normalizeAngle, zyzAngles } from './zyz';
-import { buildLinearCoupling, CouplingMap, routeCircuit } from './routing';
+import { buildLinearCoupling, chooseInitialLayout, CouplingMap, routeCircuit } from './routing';
 
 /** The native basis this transpiler targets. */
 export const NATIVE_BASIS = ['id', 'rz', 'ry', 'cx'];
+
+/** Initial-placement strategy used before routing. */
+export type LayoutStrategy =
+  /** Start from the identity placement (logical i on physical i). */
+  | 'trivial'
+  /** Place interacting qubits near each other to cut SWAPs (greedy heuristic). */
+  | 'greedy';
 
 /** Optional hardware constraints to transpile against. */
 export interface TranspileOptions {
@@ -38,6 +45,8 @@ export interface TranspileOptions {
   connectivity?: 'all-to-all' | 'linear';
   /** An explicit coupling map, taking precedence over `connectivity`. */
   coupling?: CouplingMap;
+  /** Initial-placement strategy when routing (default `'trivial'`). */
+  layout?: LayoutStrategy;
 }
 
 export interface TranspileResult {
@@ -58,6 +67,12 @@ export interface TranspileResult {
    * a measurement of logical qubit `l` from physical `finalPermutation[l]`.
    */
   finalPermutation?: number[];
+  /**
+   * The chosen initial placement, `initialLayout[logical] = physical` qubit it
+   * started on. Prepare an input for logical qubit `l` on physical
+   * `initialLayout[l]`.
+   */
+  initialLayout?: number[];
   /** Number of SWAPs inserted by routing (each is `3×cx`). */
   swapCount?: number;
 }
@@ -113,7 +128,11 @@ export class TranspilerService {
     // physically-coupled qubits (see routing.ts).
     const coupling = this.resolveCoupling(spec.numQubits, options);
     if (coupling) {
-      const routed = routeCircuit(out, spec.numQubits, coupling);
+      const initialLayout =
+        options.layout === 'greedy'
+          ? chooseInitialLayout(spec.numQubits, coupling, out)
+          : undefined;
+      const routed = routeCircuit(out, spec.numQubits, coupling, initialLayout);
       return {
         operations: routed.operations,
         basis: NATIVE_BASIS,
@@ -122,6 +141,7 @@ export class TranspilerService {
         fullyNative: unsupported.size === 0,
         unsupported: [...unsupported],
         finalPermutation: routed.finalPermutation,
+        initialLayout: routed.initialLayout,
         swapCount: routed.swapCount,
       };
     }

@@ -21,7 +21,7 @@ export class TranspilerController {
   transpile(@Body() body: TranspileDto) {
     return this.transpiler.transpile(
       { numQubits: body.numQubits, operations: body.operations },
-      { connectivity: body.connectivity, coupling: body.coupling },
+      { connectivity: body.connectivity, coupling: body.coupling, layout: body.layout },
     );
   }
 }
