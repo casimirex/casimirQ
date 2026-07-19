@@ -6,8 +6,10 @@
  */
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Input } from '@/components/ui/Input';
 import { CircuitSelector, type ResolvedCircuit } from '@/components/CircuitSelector';
 import { BackendSelector } from '@/components/BackendSelector';
@@ -59,6 +61,25 @@ export function Jobs() {
   const submit = useSubmitJob();
   const cancel = useCancelJob();
   const remove = useDeleteJob();
+  const [pendingDelete, setPendingDelete] = useState<Job | null>(null);
+
+  function handleCancel(id: string) {
+    cancel.mutate(id, {
+      onSuccess: () => toast.success('Job cancelled'),
+      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to cancel'),
+    });
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    remove.mutate(pendingDelete.id, {
+      onSuccess: () => {
+        toast.success('Job deleted');
+        setPendingDelete(null);
+      },
+      onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to delete'),
+    });
+  }
 
   function handleSubmit() {
     if (!circuit) return;
@@ -155,7 +176,7 @@ export function Jobs() {
                         size="sm"
                         variant="outline"
                         leftIcon={<X className="h-4 w-4" />}
-                        onClick={() => cancel.mutate(job.id)}
+                        onClick={() => handleCancel(job.id)}
                       >
                         Cancel
                       </Button>
@@ -164,7 +185,7 @@ export function Jobs() {
                       size="sm"
                       variant="ghost"
                       aria-label="Delete job"
-                      onClick={() => remove.mutate(job.id)}
+                      onClick={() => setPendingDelete(job)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -191,6 +212,19 @@ export function Jobs() {
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete job?"
+        description={
+          pendingDelete
+            ? `This permanently removes job ${pendingDelete.id} from your history.`
+            : undefined
+        }
+        busy={remove.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }
