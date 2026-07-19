@@ -1700,6 +1700,36 @@
           "Transpiler"
         ]
       }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "HealthController_liveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Liveness: the process is running.",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/ready": {
+      "get": {
+        "operationId": "HealthController_readiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Readiness: dependencies are reachable (503 otherwise).",
+        "tags": [
+          "Health"
+        ]
+      }
     }
   },
   "info": {
