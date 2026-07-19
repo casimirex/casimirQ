@@ -7,10 +7,14 @@
  * Strategy:
  *   - Any single-qubit gate is decomposed via the general ZYZ Euler routine into
  *     `rz` / `ry` (correct-by-construction; see zyz.ts).
- *   - `cx` is native; `cz`, `swap`, and `ccx` (Toffoli) use standard, verified
- *     identities that bottom out in `cx` + single-qubit gates.
- *   - Anything else (e.g. controlled-phase, multi-controlled gates beyond
- *     Toffoli) is passed through unchanged and reported as unsupported.
+ *   - Any *singly-controlled* single-qubit gate (cx, cy, cz, ch, cp, crx, cry,
+ *     crz, or any controlled-U) is decomposed via the general ABC identity into
+ *     two `cx` plus single-qubit rotations. `cx` and `cz` keep hand-optimized
+ *     fast paths since they are so common.
+ *   - `swap` and `ccx` (Toffoli) use standard, verified identities that bottom
+ *     out in `cx` + single-qubit gates.
+ *   - Anything else (multi-controlled gates beyond Toffoli) is passed through
+ *     unchanged and reported as unsupported.
  *
  * Correctness is verified by simulation equivalence: a transpiled circuit yields
  * the same measurement distribution as the original (see the spec).
@@ -72,9 +76,13 @@ export class TranspilerService {
       } else if (controls.length === 0 && targets.length === 2 && type === 'swap') {
         out.push(...this.decomposeSwap(targets[0], targets[1]));
       } else if (controls.length === 1 && type === 'x') {
-        out.push(cx(controls[0], targets[0]));
+        out.push(cx(controls[0], targets[0])); // cx is native
       } else if (controls.length === 1 && type === 'z') {
-        out.push(...this.decomposeCz(controls[0], targets[0]));
+        out.push(...this.decomposeCz(controls[0], targets[0])); // cz = H·CX·H
+      } else if (controls.length === 1 && targets.length === 1) {
+        // Any other singly-controlled single-qubit gate: cy, ch, cp, crx/cry/crz,
+        // or an arbitrary controlled-U — one general identity covers them all.
+        out.push(...this.decomposeControlledU(op.gate.matrix, controls[0], targets[0]));
       } else if (controls.length === 2 && type === 'x') {
         out.push(...this.decomposeToffoli(controls[0], controls[1], targets[0]));
       } else {
@@ -109,6 +117,47 @@ export class TranspilerService {
     pushRotation(ops, 'rz', gamma, q);
     pushRotation(ops, 'ry', beta, q);
     pushRotation(ops, 'rz', alpha, q);
+    return ops;
+  }
+
+  /**
+   * Decompose a singly-controlled single-qubit gate `controlled-U` into native
+   * gates via the standard ABC identity (Nielsen & Chuang §4.3).
+   *
+   * Write the target unitary — *including its global phase* — as
+   *   U = e^{iφ}·Rz(α)·Ry(β)·Rz(γ).
+   * Then define
+   *   A = Rz(α)·Ry(β/2),  B = Ry(−β/2)·Rz(−(γ+α)/2),  C = Rz((γ−α)/2),
+   * so that A·B·C = I and A·X·B·X·C = Rz(α)Ry(β)Rz(γ). The controlled gate is
+   *   [phase(φ) on control] · A(t) · CX · B(t) · CX · C(t),
+   * which fires U on the target exactly when the control is |1⟩. For a plain
+   * `cp(θ)` this reduces to the textbook controlled-phase; the φ term is what
+   * carries the phase that makes `cp` (and thus QFT) work.
+   */
+  private decomposeControlledU(
+    matrix: { get(r: number, c: number): { re: number; im: number } },
+    control: number,
+    target: number,
+  ): CircuitOperationSpec[] {
+    const m: Matrix2 = [
+      [entry(matrix, 0, 0), entry(matrix, 0, 1)],
+      [entry(matrix, 1, 0), entry(matrix, 1, 1)],
+    ];
+    const { alpha, beta, gamma, phase } = zyzAngles(m);
+
+    const ops: CircuitOperationSpec[] = [];
+    // C = Rz((γ−α)/2)
+    pushRotation(ops, 'rz', (gamma - alpha) / 2, target);
+    ops.push(cx(control, target));
+    // B = Ry(−β/2)·Rz(−(γ+α)/2)  → apply Rz first, then Ry.
+    pushRotation(ops, 'rz', -(gamma + alpha) / 2, target);
+    pushRotation(ops, 'ry', -beta / 2, target);
+    ops.push(cx(control, target));
+    // A = Rz(α)·Ry(β/2)  → apply Ry first, then Rz.
+    pushRotation(ops, 'ry', beta / 2, target);
+    pushRotation(ops, 'rz', alpha, target);
+    // phase(φ) on the control ≡ Rz(φ) up to a (global, invisible) phase.
+    pushRotation(ops, 'rz', phase, control);
     return ops;
   }
 
