@@ -9,6 +9,7 @@ import { ApiModule } from './modules/api/api.module';
 import { JobEngineModule } from './modules/job-engine/job-engine.module';
 import { BackendsModule } from './modules/backends/backends.module';
 import { TranspilerModule } from './modules/transpiler/transpiler.module';
+import { ObservabilityModule } from './modules/observability/observability.module';
 
 /**
  * Root Application Module
@@ -31,6 +32,7 @@ import { TranspilerModule } from './modules/transpiler/transpiler.module';
     JobEngineModule,
     BackendsModule,
     TranspilerModule,
+    ObservabilityModule,
   ],
 })
 export class AppModule {}
