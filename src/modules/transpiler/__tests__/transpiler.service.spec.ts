@@ -383,6 +383,32 @@ describe('TranspilerService', () => {
     }
   });
 
+  it('decomposes a multi-controlled X (mcx) submitted through the API', () => {
+    // 3-controlled X: flip q3 iff q0,q1,q2 all set. Now reachable via the gate
+    // spec, so the general multi-controlled path is exercised end to end.
+    const result = assertEquivalent(4, [
+      { gate: 'x', targets: [0] },
+      { gate: 'x', targets: [1] },
+      { gate: 'x', targets: [2] },
+      { gate: 'mcx', targets: [0, 1, 2, 3] },
+    ]);
+    expect(result.fullyNative).toBe(true);
+    expect(isNative(result)).toBe(true);
+  });
+
+  it('decomposes a multi-controlled Z (ccz) preserving its phase', () => {
+    // ccz only differs from identity by a relative phase, so this needs the
+    // phase-sensitive check.
+    const result = assertStatevectorEquivalent(3, [
+      { gate: 'h', targets: [0] },
+      { gate: 'h', targets: [1] },
+      { gate: 'h', targets: [2] },
+      { gate: 'ccz', targets: [0, 1, 2] },
+    ]);
+    expect(result.fullyNative).toBe(true);
+    expect(isNative(result)).toBe(true);
+  });
+
   it('leaves nothing unsupported for any gate the API accepts', () => {
     // Every controlled/multi-target gate in the supported set now decomposes.
     const result = transpiler.transpile({
