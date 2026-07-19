@@ -27,7 +27,13 @@ import {
   SimulationRunnerService,
 } from '../api/services/simulation-runner.service';
 import { Matrix2, normalizeAngle, zyzAngles } from './zyz';
-import { buildLinearCoupling, chooseInitialLayout, CouplingMap, routeCircuit } from './routing';
+import {
+  buildLinearCoupling,
+  chooseInitialLayout,
+  CouplingMap,
+  routeCircuit,
+  routeCircuitSabre,
+} from './routing';
 import { controlledUOps, cx, multiControlledUOps, singleQubitOps, toMatrix2 } from './controlled';
 
 /** The native basis this transpiler targets. */
@@ -40,6 +46,13 @@ export type LayoutStrategy =
   /** Place interacting qubits near each other to cut SWAPs (greedy heuristic). */
   | 'greedy';
 
+/** SWAP-insertion strategy used during routing. */
+export type RouterStrategy =
+  /** Per-gate greedy: walk one operand along a shortest path. */
+  | 'greedy'
+  /** SABRE-style lookahead over a front layer + window (usually fewer SWAPs). */
+  | 'sabre';
+
 /** Optional hardware constraints to transpile against. */
 export interface TranspileOptions {
   /** Qubit connectivity to route onto (mirrors a backend's capability). */
@@ -48,6 +61,8 @@ export interface TranspileOptions {
   coupling?: CouplingMap;
   /** Initial-placement strategy when routing (default `'trivial'`). */
   layout?: LayoutStrategy;
+  /** SWAP-insertion strategy when routing (default `'greedy'`). */
+  router?: RouterStrategy;
 }
 
 export interface TranspileResult {
@@ -141,7 +156,8 @@ export class TranspilerService {
         options.layout === 'greedy'
           ? chooseInitialLayout(spec.numQubits, coupling, out)
           : undefined;
-      const routed = routeCircuit(out, spec.numQubits, coupling, initialLayout);
+      const route = options.router === 'sabre' ? routeCircuitSabre : routeCircuit;
+      const routed = route(out, spec.numQubits, coupling, initialLayout);
       return {
         operations: routed.operations,
         basis: NATIVE_BASIS,

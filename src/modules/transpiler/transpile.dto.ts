@@ -42,4 +42,13 @@ export class TranspileDto {
   @IsOptional()
   @IsIn(['trivial', 'greedy'])
   layout?: 'trivial' | 'greedy';
+
+  /**
+   * SWAP-insertion strategy when routing. `'sabre'` uses a lookahead heuristic
+   * that usually inserts fewer SWAPs; `'greedy'` (default) walks one operand of
+   * each gate along a shortest path.
+   */
+  @IsOptional()
+  @IsIn(['greedy', 'sabre'])
+  router?: 'greedy' | 'sabre';
 }
