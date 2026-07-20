@@ -1,0 +1,87 @@
+# promtool unit tests for the alerting rules (alerts.yml).
+#   docker run --rm --entrypoint promtool -v $PWD/monitoring:/m \
+#     prom/prometheus:v2.54.1 test rules /m/alerts.test.yml
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # BackendDown fires after the target has been down for >1m.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="casimirq-backend"}'
+        values: '0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: BackendDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: casimirq-backend
+            exp_annotations:
+              summary: casimirQ backend is not being scraped
+              description: 'Prometheus cannot scrape backend:3000/metrics — the API is down or unreachable (for >1m).'
+
+  # ...and stays silent while the target is up.
+  - interval: 1m
+    input_series:
+      - series: 'up{job="casimirq-backend"}'
+        values: '1 1 1'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: BackendDown
+        exp_alerts: []
+
+  # HighErrorRate fires when the 5xx share exceeds 5% (here 50%).
+  - interval: 1m
+    input_series:
+      - series: 'casq_http_requests_total{status="503",method="GET",route="/x"}'
+        values: '0+10x6'
+      - series: 'casq_http_requests_total{status="200",method="GET",route="/x"}'
+        values: '0+10x6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: HighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Over 5% of HTTP responses are 5xx
+              description: 50% of requests have failed with a 5xx over the last 5m.
+
+  # SlowRequests fires when p95 latency crosses 1s (mass in the 2.5s bucket).
+  - interval: 1m
+    input_series:
+      - series: 'casq_http_request_duration_seconds_bucket{le="0.5"}'
+        values: '0+0x11'
+      - series: 'casq_http_request_duration_seconds_bucket{le="1"}'
+        values: '0+0x11'
+      - series: 'casq_http_request_duration_seconds_bucket{le="2.5"}'
+        values: '0+10x11'
+      - series: 'casq_http_request_duration_seconds_bucket{le="+Inf"}'
+        values: '0+10x11'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: SlowRequests
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: p95 request latency above 1s
+              description: p95 HTTP latency is 2.425s (>1s) over the last 5m.
+
+  # SimulationErrorSpike fires when simulations error for >5m.
+  - interval: 1m
+    input_series:
+      - series: 'casq_simulations_total{status="error",engine="statevector"}'
+        values: '0 1 2 3 4 5 6 7'
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: SimulationErrorSpike
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+            exp_annotations:
+              summary: Simulations are failing
+              description: Circuit simulations have been erroring for >5m (0.017/s).
