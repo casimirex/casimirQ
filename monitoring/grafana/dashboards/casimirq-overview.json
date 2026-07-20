@@ -186,6 +186,151 @@
           "legendFormat": "{{route}}"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Quantum workload",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 20 },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Simulations (ok)",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum(casq_simulations_total{status=\"ok\"})", "instant": true }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Simulation errors",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum(casq_simulations_total{status=\"error\"})", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "colorMode": "background",
+        "graphMode": "none"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Transpiles",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "sum(casq_transpiles_total)", "instant": true }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "stat",
+      "title": "SWAPs inserted (total)",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 21 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "casq_transpile_swaps_total", "instant": true }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "" },
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Simulations by engine",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": { "drawStyle": "line", "fillOpacity": 15, "stacking": { "mode": "normal" } }
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (engine) (rate(casq_simulations_total{status=\"ok\"}[$__rate_interval]))",
+          "legendFormat": "{{engine}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Simulation duration p95 by engine",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "drawStyle": "line", "fillOpacity": 5 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, engine) (rate(casq_simulation_duration_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{engine}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Circuit width (qubits) p50 / p95",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 33 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 5 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(casq_simulation_qubits_bucket[$__rate_interval])))",
+          "legendFormat": "p50 qubits"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(casq_simulation_qubits_bucket[$__rate_interval])))",
+          "legendFormat": "p95 qubits"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "SWAP insertion rate & transpiles by routing",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 33 },
+      "datasource": { "type": "prometheus", "uid": "casq-prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "drawStyle": "line", "fillOpacity": 10 } } },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (routed) (rate(casq_transpiles_total[$__rate_interval]))",
+          "legendFormat": "transpiles routed={{routed}}"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(casq_transpile_swaps_total[$__rate_interval])",
+          "legendFormat": "SWAPs/s inserted"
+        }
+      ]
     }
   ]
 }

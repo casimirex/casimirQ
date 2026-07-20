@@ -67,9 +67,11 @@ Compose ships a ready-to-use monitoring stack that consumes those metrics:
   every 15s (config in `monitoring/prometheus.yml`)
 - **Grafana** at **http://localhost:3001** (default login `admin` / `admin`,
   override with `GRAFANA_USER` / `GRAFANA_PASSWORD`) auto-provisions the
-  Prometheus datasource and a **casimirQ — Service Overview** dashboard
-  (request rate & errors by route, p50/p95/p99 latency, memory, uptime). No
-  manual setup — it's live on first boot.
+  Prometheus datasource and a **casimirQ — Service Overview** dashboard. No
+  manual setup — it's live on first boot. Two sections:
+    - *HTTP* — request rate & errors by route, p50/p95/p99 latency, memory, uptime
+    - *Quantum workload* — simulations by engine, simulation duration & circuit
+      width (qubit) distributions, transpiles, and SWAPs inserted by routing
 
 Generate a little traffic (browse the UI, or `curl` the API a few times) and the
 dashboard panels fill in within a scrape interval.

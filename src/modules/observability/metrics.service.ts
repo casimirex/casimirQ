@@ -16,6 +16,9 @@ export type Labels = Record<string, string>;
 /** Latency histogram buckets, in seconds. */
 const DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10];
 
+/** Qubit-count histogram buckets (circuit width). */
+const QUBIT_BUCKETS = [1, 2, 3, 4, 6, 8, 10, 12, 16, 20, 24];
+
 interface CounterMetric {
   help: string;
   series: Map<string, { labels: Labels; value: number }>;
@@ -53,6 +56,30 @@ export class MetricsService {
       buckets: DURATION_BUCKETS,
       series: new Map(),
     });
+
+    // Domain metrics — what the platform actually does, not just HTTP traffic.
+    this.counters.set('casq_simulations_total', {
+      help: 'Circuit simulations run, by engine and outcome.',
+      series: new Map(),
+    });
+    this.histograms.set('casq_simulation_qubits', {
+      help: 'Circuit width (number of qubits) of simulated circuits.',
+      buckets: QUBIT_BUCKETS,
+      series: new Map(),
+    });
+    this.histograms.set('casq_simulation_duration_seconds', {
+      help: 'Wall-clock time to run a simulation, in seconds, by engine.',
+      buckets: DURATION_BUCKETS,
+      series: new Map(),
+    });
+    this.counters.set('casq_transpiles_total', {
+      help: 'Circuit transpilations performed, by whether routing ran.',
+      series: new Map(),
+    });
+    this.counters.set('casq_transpile_swaps_total', {
+      help: 'Total SWAP gates inserted by routing across all transpilations.',
+      series: new Map(),
+    });
   }
 
   /** Record one completed HTTP request. */
@@ -60,6 +87,23 @@ export class MetricsService {
     const labels: Labels = { method, route, status: String(status) };
     this.incrementCounter('casq_http_requests_total', labels);
     this.observeHistogram('casq_http_request_duration_seconds', labels, durationSeconds);
+  }
+
+  /** Record one circuit simulation (success or failure). */
+  recordSimulation(engine: string, numQubits: number, durationSeconds: number, ok: boolean): void {
+    this.incrementCounter('casq_simulations_total', { engine, status: ok ? 'ok' : 'error' });
+    if (ok) {
+      this.observeHistogram('casq_simulation_qubits', { engine }, numQubits);
+      this.observeHistogram('casq_simulation_duration_seconds', { engine }, durationSeconds);
+    }
+  }
+
+  /** Record one transpilation, plus any SWAPs its routing inserted. */
+  recordTranspile(swapCount: number, routed: boolean): void {
+    this.incrementCounter('casq_transpiles_total', { routed: String(routed) });
+    if (swapCount > 0) {
+      this.incrementCounter('casq_transpile_swaps_total', {}, swapCount);
+    }
   }
 
   private incrementCounter(name: string, labels: Labels, amount = 1): void {

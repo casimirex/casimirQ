@@ -8,7 +8,7 @@
  *     a RequestIdMiddleware (trace correlation) applied to every route.
  */
 
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
@@ -17,6 +17,7 @@ import { MetricsInterceptor } from './metrics.interceptor';
 import { MetricsService } from './metrics.service';
 import { RequestIdMiddleware } from './request-id.middleware';
 
+@Global()
 @Module({
   controllers: [HealthController, MetricsController],
   providers: [

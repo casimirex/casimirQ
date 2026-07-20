@@ -8,8 +8,9 @@
  * measurement counts.
  */
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { Circuit } from '../../circuit-engine/circuit';
+import { MetricsService } from '../../observability/metrics.service';
 import {
   EngineType,
   SimulationEnginesService,
@@ -114,7 +115,10 @@ const SUPPORTED_GATES = new Set([
 
 @Injectable()
 export class SimulationRunnerService {
-  constructor(private readonly enginesService: SimulationEnginesService) {}
+  constructor(
+    private readonly enginesService: SimulationEnginesService,
+    @Optional() private readonly metrics?: MetricsService,
+  ) {}
 
   /**
    * Build an immutable Circuit from a JSON spec, validating gates and targets.
@@ -202,19 +206,33 @@ export class SimulationRunnerService {
    * Build and simulate a circuit spec, returning a serialized result.
    */
   run(spec: CircuitSpec, config: SimulationRunConfig = {}): SimulationRunResult {
-    const circuit = this.buildCircuit(spec);
     // Default to the dense statevector engine: it returns exact amplitudes for
     // arbitrary gate sets (the Clifford engine is exact but only for Clifford
     // circuits, and MPS is approximate). Callers can still opt into another
-    // engine explicitly via `engine`/`method`.
+    // engine explicitly via `engine`/`method`. Resolved up front so a failure
+    // (bad circuit, unsupported gate) is still attributed to the right engine.
     const requestedEngine: EngineType = config.engine ?? config.method ?? 'statevector';
-    const shots = this.normalizeShots(config.shots);
+    const startedAt = Date.now();
 
-    const result = this.enginesService.simulate(circuit, {
-      engine: requestedEngine,
-      shots,
-      seed: config.seed,
-    });
+    let result: ReturnType<SimulationEnginesService['simulate']>;
+    let shots: number;
+    try {
+      const circuit = this.buildCircuit(spec);
+      shots = this.normalizeShots(config.shots);
+      result = this.enginesService.simulate(circuit, {
+        engine: requestedEngine,
+        shots,
+        seed: config.seed,
+      });
+    } catch (err) {
+      this.metrics?.recordSimulation(
+        requestedEngine,
+        spec.numQubits ?? 0,
+        (Date.now() - startedAt) / 1000,
+        false,
+      );
+      throw err;
+    }
 
     const numQubits = result.numQubits;
     const statevector: SerializedAmplitude[] = [];
@@ -236,6 +254,13 @@ export class SimulationRunnerService {
     }
 
     statevector.sort((a, b) => (a.state < b.state ? -1 : a.state > b.state ? 1 : 0));
+
+    this.metrics?.recordSimulation(
+      requestedEngine,
+      numQubits,
+      result.executionTimeMs / 1000,
+      true,
+    );
 
     return {
       status: 'completed',
