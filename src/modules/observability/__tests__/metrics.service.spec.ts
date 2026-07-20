@@ -58,4 +58,33 @@ describe('MetricsService', () => {
     const out = metrics.render();
     expect(out).toContain('route="/weird\\"\\\\route"');
   });
+
+  it('records simulations by engine and outcome, with qubit/duration histograms', () => {
+    metrics.recordSimulation('statevector', 3, 0.05, true);
+    metrics.recordSimulation('statevector', 12, 0.4, true);
+    metrics.recordSimulation('clifford', 2, 0.01, false); // failure
+
+    const out = metrics.render();
+    expect(out).toContain('casq_simulations_total{engine="statevector",status="ok"} 2');
+    expect(out).toContain('casq_simulations_total{engine="clifford",status="error"} 1');
+    // Qubit histogram: le=4 covers the 3-qubit run but not the 12-qubit one.
+    expect(out).toContain('casq_simulation_qubits_bucket{engine="statevector",le="4"} 1');
+    expect(out).toContain('casq_simulation_qubits_bucket{engine="statevector",le="+Inf"} 2');
+    // Failures count, but don't pollute the success (qubit/duration) histograms.
+    expect(out).not.toContain('casq_simulation_qubits_bucket{engine="clifford"');
+    expect(out).not.toContain('casq_simulation_duration_seconds_count{engine="clifford"}');
+    // Duration histogram present for the engine.
+    expect(out).toContain('casq_simulation_duration_seconds_count{engine="statevector"} 2');
+  });
+
+  it('counts transpilations and accumulates inserted SWAPs', () => {
+    metrics.recordTranspile(0, false); // no routing
+    metrics.recordTranspile(2, true); // routed, 2 SWAPs
+    metrics.recordTranspile(1, true); // routed, 1 SWAP
+
+    const out = metrics.render();
+    expect(out).toContain('casq_transpiles_total{routed="false"} 1');
+    expect(out).toContain('casq_transpiles_total{routed="true"} 2');
+    expect(out).toContain('casq_transpile_swaps_total 3');
+  });
 });

@@ -20,7 +20,8 @@
  * the same measurement distribution as the original (see the spec).
  */
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
+import { MetricsService } from '../observability/metrics.service';
 import {
   CircuitOperationSpec,
   CircuitSpec,
@@ -97,7 +98,10 @@ const T = Math.PI / 4;
 
 @Injectable()
 export class TranspilerService {
-  constructor(private readonly runner: SimulationRunnerService) {}
+  constructor(
+    private readonly runner: SimulationRunnerService,
+    @Optional() private readonly metrics?: MetricsService,
+  ) {}
 
   transpile(spec: CircuitSpec, options: TranspileOptions = {}): TranspileResult {
     // Build the circuit so we have each gate's matrix, type, and controls. The
@@ -158,6 +162,7 @@ export class TranspilerService {
           : undefined;
       const route = options.router === 'sabre' ? routeCircuitSabre : routeCircuit;
       const routed = route(out, spec.numQubits, coupling, initialLayout);
+      this.metrics?.recordTranspile(routed.swapCount ?? 0, true);
       return {
         operations: routed.operations,
         basis: NATIVE_BASIS,
@@ -171,6 +176,7 @@ export class TranspilerService {
       };
     }
 
+    this.metrics?.recordTranspile(0, false);
     return {
       operations: out,
       basis: NATIVE_BASIS,
