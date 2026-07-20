@@ -76,6 +76,28 @@ Compose ships a ready-to-use monitoring stack that consumes those metrics:
 Generate a little traffic (browse the UI, or `curl` the API a few times) and the
 dashboard panels fill in within a scrape interval.
 
+### Alerting
+
+Prometheus evaluates alert rules (`monitoring/alerts.yml`) and routes firing
+alerts to **Alertmanager** at **http://localhost:9093**:
+
+| Alert | Fires when | Severity |
+| --- | --- | --- |
+| `BackendDown` | `/metrics` unscrapable for >1m | critical |
+| `HighErrorRate` | >5% of responses are 5xx (5m) | warning |
+| `SlowRequests` | p95 latency >1s (10m) | warning |
+| `SimulationErrorSpike` | simulations erroring for >5m | warning |
+
+Firing alerts are visible in Prometheus at `/alerts` and in the Alertmanager UI.
+The default receiver has no outbound integration (alerts just surface in the
+UI) — add a `slack_configs`/`email_configs` block in `monitoring/alertmanager.yml`
+to actually notify. The rules are unit-tested with `promtool`:
+
+```bash
+docker run --rm --entrypoint promtool -v "$PWD/monitoring:/m" \
+  prom/prometheus:v2.54.1 test rules /m/alerts.test.yml
+```
+
 ## Local development
 
 Requires **Node.js 18+** (CI runs on Node 20).

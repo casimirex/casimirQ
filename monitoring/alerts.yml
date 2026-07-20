@@ -1,0 +1,59 @@
+# Prometheus alerting rules for the casimirQ stack.
+#
+# These fire on the metrics the backend already exposes (see the Observability
+# section of the README). Firing alerts are visible in Prometheus at /alerts
+# and routed to Alertmanager (:9093).
+groups:
+  - name: casimirq-availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="casimirq-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: casimirQ backend is not being scraped
+          description: >-
+            Prometheus cannot scrape backend:3000/metrics — the API is down or
+            unreachable (for >1m).
+
+  - name: casimirq-http
+    rules:
+      - alert: HighErrorRate
+        # Server (5xx) share of all responses over the last 5m. No traffic →
+        # denominator 0 → no data → does not fire.
+        expr: >-
+          sum(rate(casq_http_requests_total{status=~"5.."}[5m]))
+            /
+          sum(rate(casq_http_requests_total[5m]))
+            > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Over 5% of HTTP responses are 5xx
+          description: '{{ $value | humanizePercentage }} of requests have failed with a 5xx over the last 5m.'
+
+      - alert: SlowRequests
+        expr: >-
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(casq_http_request_duration_seconds_bucket[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: p95 request latency above 1s
+          description: 'p95 HTTP latency is {{ $value | humanizeDuration }} (>1s) over the last 5m.'
+
+  - name: casimirq-workload
+    rules:
+      - alert: SimulationErrorSpike
+        expr: sum(rate(casq_simulations_total{status="error"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Simulations are failing
+          description: 'Circuit simulations have been erroring for >5m ({{ $value | printf "%.3f" }}/s).'

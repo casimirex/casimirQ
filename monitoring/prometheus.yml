@@ -7,6 +7,16 @@ global:
   scrape_interval: 15s
   scrape_timeout: 10s
 
+# Alerting rules evaluated against the scraped metrics.
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+# Route firing alerts to Alertmanager over the compose network.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 scrape_configs:
   - job_name: casimirq-backend
     metrics_path: /metrics
