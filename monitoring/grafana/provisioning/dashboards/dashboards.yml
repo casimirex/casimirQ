@@ -1,0 +1,13 @@
+# Tell Grafana to load dashboard JSON from a folder on disk, so the starter
+# casimirQ dashboard ships with the stack instead of being imported by hand.
+apiVersion: 1
+
+providers:
+  - name: casimirq
+    orgId: 1
+    folder: casimirQ
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
