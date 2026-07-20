@@ -12,6 +12,7 @@ import {
   BookOpen,
   ListChecks,
   Activity,
+  Layers,
   LogOut,
   User,
   Settings,
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Simulations', href: '/simulations', icon: Play },
   { name: 'Jobs', href: '/jobs', icon: ListChecks },
   { name: 'Noise Lab', href: '/noise', icon: Activity },
+  { name: 'Transpile', href: '/transpile', icon: Layers },
   { name: 'Algorithms', href: '/algorithms', icon: BookOpen },
 ];
 
