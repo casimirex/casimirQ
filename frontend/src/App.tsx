@@ -21,6 +21,7 @@ import { Simulations } from '@/pages/Simulations';
 import { Algorithms } from '@/pages/Algorithms';
 import { Jobs } from '@/pages/Jobs';
 import { NoiseLab } from '@/pages/NoiseLab';
+import { Transpile } from '@/pages/Transpile';
 import { Login } from '@/pages/Login';
 import { Signup } from '@/pages/Signup';
 import { NotFound } from '@/pages/NotFound';
@@ -81,6 +82,7 @@ function App() {
             <Route path="/simulations" element={<Simulations />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/noise" element={<NoiseLab />} />
+            <Route path="/transpile" element={<Transpile />} />
             <Route path="/algorithms" element={<Algorithms />} />
           </Route>
 

@@ -9,5 +9,6 @@ export { Simulations } from './Simulations';
 export { Algorithms } from './Algorithms';
 export { Jobs } from './Jobs';
 export { NoiseLab } from './NoiseLab';
+export { Transpile } from './Transpile';
 export { Login } from './Login';
 export { NotFound } from './NotFound';

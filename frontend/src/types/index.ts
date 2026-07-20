@@ -110,6 +110,39 @@ export interface SimulationResult {
   };
 }
 
+/** A device qubit connectivity to route onto (POST /transpile). */
+export type Connectivity = 'linear' | 'all-to-all';
+/** Initial-placement strategy used before routing. */
+export type LayoutStrategy = 'trivial' | 'greedy';
+/** SWAP-insertion strategy used during routing. */
+export type RouterStrategy = 'greedy' | 'sabre';
+
+/** Request body for POST /transpile. */
+export interface TranspileRequest {
+  numQubits: number;
+  operations: SimulationOperation[];
+  connectivity?: Connectivity;
+  coupling?: number[][];
+  layout?: LayoutStrategy;
+  router?: RouterStrategy;
+}
+
+/** Response from POST /transpile. */
+export interface TranspileResult {
+  operations: SimulationOperation[];
+  basis: string[];
+  originalGateCount: number;
+  transpiledGateCount: number;
+  fullyNative: boolean;
+  unsupported: string[];
+  /** Present when routed: finalPermutation[logical] = physical wire holding it. */
+  finalPermutation?: number[];
+  /** Present when routed: initialLayout[logical] = physical wire it started on. */
+  initialLayout?: number[];
+  /** Number of SWAPs inserted by routing (each expands to 3×cx). */
+  swapCount?: number;
+}
+
 /** Results payload shared by simulate responses and stored runs. */
 export interface SimulationResultsPayload {
   statevector: SimulationAmplitude[];
