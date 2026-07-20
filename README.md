@@ -46,8 +46,33 @@ What compose starts:
 - `backend` — the API on `:3000` (waits for `migrate` to finish)
 - `frontend` — nginx serving the SPA on `:8080`, reverse-proxying `/api` to the
   backend (so the app is single-origin — no CORS needed)
+- `prometheus` — scrapes the backend's metrics on `:9090`
+- `grafana` — dashboards over Prometheus on `:3001` (see *Observability* below)
 
 Set a real secret in production: `JWT_SECRET=... docker compose up`.
+
+## Observability
+
+The backend emits operational signals out of the box:
+
+- `GET /api/v1/health` — liveness (200 while the process is up)
+- `GET /api/v1/ready` — readiness (503 when the database is unreachable)
+- `GET /metrics` — Prometheus text exposition: HTTP request counts and latency
+  histograms (by method, route, status), plus process gauges and build info
+- every response carries an `X-Request-Id` for log correlation
+
+Compose ships a ready-to-use monitoring stack that consumes those metrics:
+
+- **Prometheus** at **http://localhost:9090** scrapes `backend:3000/metrics`
+  every 15s (config in `monitoring/prometheus.yml`)
+- **Grafana** at **http://localhost:3001** (default login `admin` / `admin`,
+  override with `GRAFANA_USER` / `GRAFANA_PASSWORD`) auto-provisions the
+  Prometheus datasource and a **casimirQ — Service Overview** dashboard
+  (request rate & errors by route, p50/p95/p99 latency, memory, uptime). No
+  manual setup — it's live on first boot.
+
+Generate a little traffic (browse the UI, or `curl` the API a few times) and the
+dashboard panels fill in within a scrape interval.
 
 ## Local development
 
