@@ -17,6 +17,7 @@ import {
   DeutschJozsaDto,
   GroverDto,
   AmplitudeAmplificationDto,
+  HamiltonianSimulationDto,
   PhaseEstimationDto,
   QAOADto,
   QFTDto,
@@ -417,6 +418,43 @@ export class AlgorithmsController {
         classicalStdDev: output.classicalStdDev,
         spreadRatio: output.spreadRatio,
         distribution: output.distribution,
+      },
+    };
+  }
+
+  /**
+   * Execute Trotterized Hamiltonian simulation e^{-iHt}.
+   */
+  @Post('hamiltonian-simulation')
+  @HttpCode(HttpStatus.OK)
+  async executeHamiltonianSimulation(@Body() dto: HamiltonianSimulationDto) {
+    const result = this.algorithmsService.executeHamiltonianSimulation(
+      dto.n,
+      dto.terms,
+      dto.time,
+      dto.steps ?? 1,
+      dto.order ?? 1,
+      dto.initialOnes ?? [],
+    );
+    const output = result.output as {
+      time: number;
+      steps: number;
+      order: number;
+      termCount: number;
+      probabilities: { state: number; probability: number }[];
+    };
+    return {
+      algorithm: 'Hamiltonian Simulation',
+      parameters: {
+        n: dto.n,
+        time: dto.time,
+        steps: output.steps,
+        order: output.order,
+        termCount: output.termCount,
+      },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        probabilities: output.probabilities,
       },
     };
   }

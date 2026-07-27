@@ -220,6 +220,20 @@ describe('AlgorithmsController', () => {
     });
   });
 
+  describe('POST /algorithms/hamiltonian-simulation', () => {
+    it('evolves |0⟩ under H=X and matches sin²(t)', async () => {
+      const t = 0.7;
+      const result = await controller.executeHamiltonianSimulation({
+        n: 1,
+        terms: [{ coefficient: 1, paulis: ['X'], qubits: [0] }],
+        time: t,
+      });
+      expect(result.algorithm).toBe('Hamiltonian Simulation');
+      const p1 = result.result.probabilities.find((e) => e.state === 1)?.probability ?? 0;
+      expect(p1).toBeCloseTo(Math.pow(Math.sin(t), 2), 9);
+    });
+  });
+
   describe('GET /algorithms/:name/verify', () => {
     it('should verify QFT', () => {
       const result = controller.verifyAlgorithm('qft');
