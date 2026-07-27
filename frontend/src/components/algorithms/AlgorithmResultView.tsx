@@ -34,8 +34,34 @@ function formatScalar(value: unknown): string {
   return String(value);
 }
 
+/** Compact one-line rendering of an object, e.g. `{re, im}` → `re=0.98 · im=0`. */
+function formatObject(obj: Record<string, unknown>): string {
+  return Object.entries(obj)
+    .map(([k, v]) => `${k}=${formatScalar(v)}`)
+    .join(' · ');
+}
+
 function ValueCell({ value }: { value: unknown }) {
   if (Array.isArray(value)) {
+    const objectArray =
+      value.length > 0 && value.every((el) => el != null && typeof el === 'object');
+    if (objectArray) {
+      // Arrays of records (e.g. a walk distribution) — cap for readability.
+      const MAX = 16;
+      const shown = value.slice(0, MAX) as Record<string, unknown>[];
+      return (
+        <div className="max-h-40 space-y-0.5 overflow-y-auto text-right">
+          {shown.map((el, i) => (
+            <div key={i} className="font-mono text-xs">
+              {formatObject(el)}
+            </div>
+          ))}
+          {value.length > MAX && (
+            <div className="text-xs text-muted-foreground">+{value.length - MAX} more</div>
+          )}
+        </div>
+      );
+    }
     return <span className="font-mono text-sm">[{value.map(formatScalar).join(', ')}]</span>;
   }
   if (value && typeof value === 'object') {

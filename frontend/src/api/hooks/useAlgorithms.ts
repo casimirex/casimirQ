@@ -18,7 +18,21 @@ import type {
 const ALGORITHMS_KEY = 'algorithms';
 
 /** Slugs of the executable algorithm endpoints (`POST /algorithms/<slug>`). */
-export type AlgorithmSlug = 'qft' | 'grover' | 'vqe' | 'qaoa' | 'teleport' | 'shor';
+export type AlgorithmSlug =
+  | 'qft'
+  | 'grover'
+  | 'vqe'
+  | 'qaoa'
+  | 'teleport'
+  | 'shor'
+  | 'deutsch-jozsa'
+  | 'bernstein-vazirani'
+  | 'simon'
+  | 'phase-estimation'
+  | 'amplitude-amplification'
+  | 'quantum-walk'
+  | 'hamiltonian-simulation'
+  | 'hhl';
 
 /**
  * List the algorithms the backend can run.

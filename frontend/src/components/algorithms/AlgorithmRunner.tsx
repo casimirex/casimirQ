@@ -41,10 +41,16 @@ function apiErrorMessage(err: unknown): string {
 export function AlgorithmRunner({ spec, onClose }: AlgorithmRunnerProps) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
-      spec.fields.map((f) => [f.key, f.optional ? '' : String(f.default)]),
+      spec.fields.map((f) => {
+        if (f.kind === 'bool') return [f.key, String(f.default)];
+        if (f.kind === 'select') return [f.key, f.default];
+        if (f.kind === 'intList' || f.kind === 'floatList') return [f.key, f.default];
+        return [f.key, f.optional ? '' : String(f.default)];
+      }),
     ),
   );
   const [exampleKey, setExampleKey] = useState<string>('');
+  const [presetIndex, setPresetIndex] = useState(0);
 
   const vqeExamples = useVqeExamples();
   const qaoaExamples = useQaoaExamples();
@@ -73,12 +79,46 @@ export function AlgorithmRunner({ spec, onClose }: AlgorithmRunnerProps) {
 
     for (const f of spec.fields) {
       const raw = values[f.key];
+
+      if (f.kind === 'bool') {
+        body[f.key] = raw === 'true';
+        continue;
+      }
       if (f.optional && (raw === '' || raw == null)) continue;
-      const num = f.kind === 'int' ? parseInt(raw, 10) : parseFloat(raw);
-      if (Number.isNaN(num)) return { ok: false, error: `Please enter a value for “${f.label}”.` };
-      if (f.min != null && num < f.min) return { ok: false, error: `${f.label} must be ≥ ${f.min}.` };
-      if (f.max != null && num > f.max) return { ok: false, error: `${f.label} must be ≤ ${f.max}.` };
-      body[f.key] = num;
+
+      if (f.kind === 'select') {
+        body[f.key] = f.numeric ? Number(raw) : raw;
+        continue;
+      }
+      if (f.kind === 'intList' || f.kind === 'floatList') {
+        const parts = raw
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s !== '');
+        if (parts.length === 0) return { ok: false, error: `Please enter ${f.label}.` };
+        const nums = parts.map((s) => (f.kind === 'intList' ? parseInt(s, 10) : parseFloat(s)));
+        if (nums.some((x) => Number.isNaN(x)))
+          return { ok: false, error: `${f.label} must be a comma-separated list of numbers.` };
+        body[f.key] = nums;
+        continue;
+      }
+
+      if (f.kind === 'int' || f.kind === 'float') {
+        const num = f.kind === 'int' ? parseInt(raw, 10) : parseFloat(raw);
+        if (Number.isNaN(num))
+          return { ok: false, error: `Please enter a value for “${f.label}”.` };
+        if (f.min != null && num < f.min)
+          return { ok: false, error: `${f.label} must be ≥ ${f.min}.` };
+        if (f.max != null && num > f.max)
+          return { ok: false, error: `${f.label} must be ≤ ${f.max}.` };
+        body[f.key] = num;
+      }
+    }
+
+    if (spec.presets) {
+      const opt = spec.presets.options[presetIndex];
+      if (!opt) return { ok: false, error: `Pick a ${spec.presets.label.toLowerCase()}.` };
+      Object.assign(body, opt.body);
     }
 
     if (spec.usesExample === 'vqe') {
@@ -174,21 +214,96 @@ export function AlgorithmRunner({ spec, onClose }: AlgorithmRunnerProps) {
             </div>
           )}
 
-          {spec.fields.map((f) => (
-            <Input
-              key={f.key}
-              label={f.label + (f.optional ? ' (optional)' : '')}
-              type="number"
-              inputMode={f.kind === 'int' ? 'numeric' : 'decimal'}
-              step={f.kind === 'int' ? 1 : 'any'}
-              min={f.min}
-              max={f.max}
-              value={values[f.key]}
-              placeholder={f.optional ? 'auto' : undefined}
-              helperText={f.help}
-              onChange={(e) => setField(f.key, e.target.value)}
-            />
-          ))}
+          {spec.presets && (
+            <div>
+              <label className="mb-2 block text-sm font-medium">{spec.presets.label}</label>
+              <select
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={String(presetIndex)}
+                onChange={(e) => {
+                  setPresetIndex(Number(e.target.value));
+                  run.reset();
+                }}
+              >
+                {spec.presets.options.map((o, i) => (
+                  <option key={o.label} value={i}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {spec.fields.map((f) => {
+            if (f.kind === 'bool') {
+              return (
+                <label key={f.key} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 rounded border-input"
+                    checked={values[f.key] === 'true'}
+                    onChange={(e) => setField(f.key, String(e.target.checked))}
+                  />
+                  <span>
+                    <span className="font-medium">{f.label}</span>
+                    {f.help && <span className="block text-xs text-muted-foreground">{f.help}</span>}
+                  </span>
+                </label>
+              );
+            }
+
+            if (f.kind === 'select') {
+              return (
+                <div key={f.key}>
+                  <label className="mb-2 block text-sm font-medium">{f.label}</label>
+                  <select
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={values[f.key]}
+                    onChange={(e) => setField(f.key, e.target.value)}
+                  >
+                    {f.options.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                  {f.help && <p className="mt-1 text-xs text-muted-foreground">{f.help}</p>}
+                </div>
+              );
+            }
+
+            if (f.kind === 'int' || f.kind === 'float') {
+              return (
+                <Input
+                  key={f.key}
+                  label={f.label + (f.optional ? ' (optional)' : '')}
+                  type="number"
+                  inputMode={f.kind === 'int' ? 'numeric' : 'decimal'}
+                  step={f.kind === 'int' ? 1 : 'any'}
+                  min={f.min}
+                  max={f.max}
+                  value={values[f.key]}
+                  placeholder={f.optional ? 'auto' : undefined}
+                  helperText={f.help}
+                  onChange={(e) => setField(f.key, e.target.value)}
+                />
+              );
+            }
+
+            // intList / floatList — a comma-separated text field.
+            return (
+              <Input
+                key={f.key}
+                label={f.label + (f.optional ? ' (optional)' : '')}
+                type="text"
+                inputMode={f.kind === 'intList' ? 'numeric' : 'decimal'}
+                value={values[f.key]}
+                placeholder={String(f.default)}
+                helperText={f.help}
+                onChange={(e) => setField(f.key, e.target.value)}
+              />
+            );
+          })}
         </div>
 
         {(localError || run.isError) && (
