@@ -199,6 +199,18 @@ describe('AlgorithmsController', () => {
     });
   });
 
+  describe('POST /algorithms/amplitude-amplification', () => {
+    it('amplifies a good state under a non-uniform preparation', async () => {
+      const result = await controller.executeAmplitudeAmplification({
+        angles: [Math.PI / 2, Math.PI / 3, (2 * Math.PI) / 5],
+        goodStates: [7],
+      });
+      expect(result.algorithm).toBe('Quantum Amplitude Amplification');
+      expect(result.result.finalProbability).toBeGreaterThan(result.result.initialProbability);
+      expect(result.result.finalProbability).toBeCloseTo(result.result.theoreticalProbability, 6);
+    });
+  });
+
   describe('GET /algorithms/:name/verify', () => {
     it('should verify QFT', () => {
       const result = controller.verifyAlgorithm('qft');

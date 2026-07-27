@@ -20,3 +20,4 @@ export { DeutschJozsa, DeutschJozsaOracle } from './implementations/deutsch-jozs
 export { BernsteinVazirani } from './implementations/bernstein-vazirani';
 export { SimonsAlgorithm } from './implementations/simons-algorithm';
 export { PhaseEstimation } from './implementations/phase-estimation';
+export { AmplitudeAmplification } from './implementations/amplitude-amplification';
