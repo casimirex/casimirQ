@@ -20,6 +20,7 @@ import {
   PhaseEstimationDto,
   QAOADto,
   QFTDto,
+  QuantumWalkDto,
   ShorDto,
   SimonDto,
   TeleportDto,
@@ -376,6 +377,46 @@ export class AlgorithmsController {
         theoreticalProbability: output.theoreticalProbability,
         iterations: output.iterations,
         amplification: output.amplification,
+      },
+    };
+  }
+
+  /**
+   * Execute a discrete-time quantum walk on a cycle.
+   */
+  @Post('quantum-walk')
+  @HttpCode(HttpStatus.OK)
+  async executeQuantumWalk(@Body() dto: QuantumWalkDto) {
+    const result = this.algorithmsService.executeQuantumWalk(dto.n, dto.steps, {
+      start: dto.start,
+      symmetricCoin: dto.symmetricCoin,
+    });
+    const output = result.output as {
+      steps: number;
+      start: number;
+      nodes: number;
+      meanDisplacement: number;
+      stdDev: number;
+      classicalStdDev: number;
+      spreadRatio: number;
+      distribution: { position: number; probability: number }[];
+    };
+    return {
+      algorithm: 'Quantum Walk',
+      parameters: {
+        n: dto.n,
+        steps: dto.steps,
+        start: output.start,
+        symmetricCoin: dto.symmetricCoin ?? true,
+      },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        nodes: output.nodes,
+        meanDisplacement: output.meanDisplacement,
+        stdDev: output.stdDev,
+        classicalStdDev: output.classicalStdDev,
+        spreadRatio: output.spreadRatio,
+        distribution: output.distribution,
       },
     };
   }

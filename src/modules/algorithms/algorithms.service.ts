@@ -10,6 +10,7 @@ import { BernsteinVazirani } from './implementations/bernstein-vazirani';
 import { SimonsAlgorithm } from './implementations/simons-algorithm';
 import { PhaseEstimation } from './implementations/phase-estimation';
 import { AmplitudeAmplification } from './implementations/amplitude-amplification';
+import { QuantumWalk } from './implementations/quantum-walk';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
 import {
   IQuantumAlgorithm,
@@ -108,7 +109,25 @@ export class AlgorithmsService {
         category: 'search',
         factory: () => new AmplitudeAmplification(this.enginesService),
       },
+      {
+        name: 'Quantum Walk',
+        description: 'Discrete-time coined quantum walk on a cycle (ballistic spreading)',
+        category: 'search',
+        factory: () => new QuantumWalk(this.enginesService),
+      },
     ];
+  }
+
+  /**
+   * Execute a discrete-time quantum walk.
+   */
+  executeQuantumWalk(
+    n: number,
+    steps: number,
+    options: { start?: number; symmetricCoin?: boolean } = {},
+  ): AlgorithmResult {
+    const algorithm = new QuantumWalk(this.enginesService);
+    return algorithm.execute(n, steps, options);
   }
 
   /**
@@ -256,6 +275,10 @@ export class AlgorithmsService {
       case 'amplitude-amplification':
       case 'qaa': {
         return new AmplitudeAmplification(this.enginesService).verify();
+      }
+      case 'quantum-walk':
+      case 'walk': {
+        return new QuantumWalk(this.enginesService).verify();
       }
       default:
         throw new Error(`Verification not available for ${algorithmName}`);

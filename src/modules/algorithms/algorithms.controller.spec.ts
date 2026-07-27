@@ -211,6 +211,15 @@ describe('AlgorithmsController', () => {
     });
   });
 
+  describe('POST /algorithms/quantum-walk', () => {
+    it('runs a walk and reports ballistic spreading', async () => {
+      const result = await controller.executeQuantumWalk({ n: 5, steps: 8 });
+      expect(result.algorithm).toBe('Quantum Walk');
+      expect(result.result.stdDev).toBeGreaterThan(result.result.classicalStdDev);
+      expect(result.result.distribution.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('GET /algorithms/:name/verify', () => {
     it('should verify QFT', () => {
       const result = controller.verifyAlgorithm('qft');
