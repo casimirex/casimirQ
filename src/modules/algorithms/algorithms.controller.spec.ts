@@ -189,6 +189,16 @@ describe('AlgorithmsController', () => {
     });
   });
 
+  describe('POST /algorithms/phase-estimation', () => {
+    it('estimates an exactly-representable eigenphase', async () => {
+      const result = await controller.executePhaseEstimation({ phi: 0.375, precision: 4 });
+      expect(result.algorithm).toBe('Quantum Phase Estimation');
+      expect(result.result.estimatedPhase).toBeCloseTo(0.375, 9);
+      expect(result.result.measuredInteger).toBe(6);
+      expect(result.result.error).toBeLessThan(1e-9);
+    });
+  });
+
   describe('GET /algorithms/:name/verify', () => {
     it('should verify QFT', () => {
       const result = controller.verifyAlgorithm('qft');

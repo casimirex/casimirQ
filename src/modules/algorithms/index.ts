@@ -19,3 +19,4 @@ export { ShorsAlgorithm } from './implementations/shors-algorithm';
 export { DeutschJozsa, DeutschJozsaOracle } from './implementations/deutsch-jozsa';
 export { BernsteinVazirani } from './implementations/bernstein-vazirani';
 export { SimonsAlgorithm } from './implementations/simons-algorithm';
+export { PhaseEstimation } from './implementations/phase-estimation';
