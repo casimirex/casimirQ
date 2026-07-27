@@ -156,6 +156,39 @@ describe('AlgorithmsController', () => {
     });
   });
 
+  describe('POST /algorithms/deutsch-jozsa', () => {
+    it('decides a constant oracle', async () => {
+      const result = await controller.executeDeutschJozsa({ n: 3, oracle: 'constant', value: 1 });
+      expect(result.algorithm).toBe('Deutsch-Jozsa');
+      expect(result.result.decision).toBe('constant');
+      expect(result.result.correct).toBe(true);
+    });
+
+    it('decides a balanced oracle (default full mask)', async () => {
+      const result = await controller.executeDeutschJozsa({ n: 3, oracle: 'balanced' });
+      expect(result.result.decision).toBe('balanced');
+      expect(result.result.correct).toBe(true);
+    });
+  });
+
+  describe('POST /algorithms/bernstein-vazirani', () => {
+    it('recovers the hidden string', async () => {
+      const result = await controller.executeBernsteinVazirani({ n: 4, secret: 11 });
+      expect(result.algorithm).toBe('Bernstein-Vazirani');
+      expect(result.result.recovered).toBe(11);
+      expect(result.result.correct).toBe(true);
+    });
+  });
+
+  describe('POST /algorithms/simon', () => {
+    it('recovers the hidden period', async () => {
+      const result = await controller.executeSimon({ n: 3, secret: 5 });
+      expect(result.algorithm).toBe("Simon's Algorithm");
+      expect(result.result.recovered).toBe(5);
+      expect(result.result.correct).toBe(true);
+    });
+  });
+
   describe('GET /algorithms/:name/verify', () => {
     it('should verify QFT', () => {
       const result = controller.verifyAlgorithm('qft');

@@ -241,6 +241,96 @@
         ]
       }
     },
+    "/api/v1/algorithms/deutsch-jozsa": {
+      "post": {
+        "operationId": "AlgorithmsController_executeDeutschJozsa",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeutschJozsaDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute Deutsch-Jozsa: decide whether an oracle is constant or balanced.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
+    "/api/v1/algorithms/bernstein-vazirani": {
+      "post": {
+        "operationId": "AlgorithmsController_executeBernsteinVazirani",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BernsteinVaziraniDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute Bernstein-Vazirani: recover a hidden bit string in one query.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
+    "/api/v1/algorithms/simon": {
+      "post": {
+        "operationId": "AlgorithmsController_executeSimon",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimonDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute Simon's algorithm: find the hidden period of a 2-to-1 function.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
     "/api/v1/algorithms/{name}/verify": {
       "get": {
         "operationId": "AlgorithmsController_verifyAlgorithm",
@@ -1930,6 +2020,79 @@
         },
         "required": [
           "N"
+        ]
+      },
+      "DeutschJozsaDto": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 15
+          },
+          "oracle": {
+            "type": "string",
+            "description": "Which kind of oracle to interrogate.",
+            "enum": [
+              "constant",
+              "balanced"
+            ]
+          },
+          "value": {
+            "type": "number",
+            "description": "For a constant oracle: the value f returns for every input (default 0).",
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "mask": {
+            "type": "number",
+            "description": "For a balanced oracle: the parity mask defining f(x)=(mask·x) mod 2.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "n",
+          "oracle"
+        ]
+      },
+      "BernsteinVaziraniDto": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 15
+          },
+          "secret": {
+            "type": "number",
+            "description": "The hidden bit string s, as an integer in [0, 2^n).",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "n",
+          "secret"
+        ]
+      },
+      "SimonDto": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 8
+          },
+          "secret": {
+            "type": "number",
+            "description": "The hidden period s, as an integer in [0, 2^n).",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "n",
+          "secret"
         ]
       },
       "SimulateNoiseDto": {
