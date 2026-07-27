@@ -2,9 +2,26 @@ import { describe, it, expect } from 'vitest';
 import { ALGORITHM_CATALOG, CATEGORY_LABELS } from './algorithmCatalog';
 
 describe('algorithm catalog', () => {
-  it('exposes the six executable algorithms with unique slugs', () => {
+  it('exposes the fourteen executable algorithms with unique slugs', () => {
     const slugs = ALGORITHM_CATALOG.map((a) => a.slug);
-    expect(slugs.sort()).toEqual(['grover', 'qaoa', 'qft', 'shor', 'teleport', 'vqe']);
+    expect(slugs.slice().sort()).toEqual(
+      [
+        'amplitude-amplification',
+        'bernstein-vazirani',
+        'deutsch-jozsa',
+        'grover',
+        'hamiltonian-simulation',
+        'hhl',
+        'phase-estimation',
+        'qaoa',
+        'qft',
+        'quantum-walk',
+        'shor',
+        'simon',
+        'teleport',
+        'vqe',
+      ].sort(),
+    );
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 
@@ -32,7 +49,7 @@ describe('algorithm catalog', () => {
   it('bounds qubit counts so they never exceed the engine limit', () => {
     for (const algo of ALGORITHM_CATALOG) {
       const nField = algo.fields.find((f) => f.key === 'n');
-      if (nField) {
+      if (nField && nField.kind === 'int') {
         expect(nField.min).toBe(1);
         expect(nField.max).toBeLessThanOrEqual(16);
       }
