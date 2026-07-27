@@ -91,8 +91,11 @@ export class TeleportDto {
 
 /** DTO for Shor's algorithm. */
 export class ShorDto {
+  // Genuine quantum order finding builds an O(3·⌈log₂N⌉)-qubit circuit run on
+  // the statevector simulator, so N is capped by the qubit budget.
   @IsInt()
   @Min(2)
+  @Max(32)
   N!: number;
 }
 

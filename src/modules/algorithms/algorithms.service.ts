@@ -77,7 +77,7 @@ export class AlgorithmsService {
       },
       {
         name: "Shor's Algorithm",
-        description: 'Factors integers in polynomial time',
+        description: 'Factors integers via genuine quantum order finding (QPE)',
         category: 'cryptography',
         factory: () => new ShorsAlgorithm(this.enginesService),
       },
