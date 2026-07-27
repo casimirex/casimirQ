@@ -146,6 +146,17 @@ export class SimonDto {
   secret!: number;
 }
 
+/** DTO for the HHL linear-system solver (canonical 2×2 A = 1.5·I + 0.5·X). */
+export class HHLDto {
+  /** Amplitude of |0⟩ in the right-hand side b (need not be normalised). */
+  @IsNumber()
+  b0!: number;
+
+  /** Amplitude of |1⟩ in the right-hand side b (need not be normalised). */
+  @IsNumber()
+  b1!: number;
+}
+
 /** DTO for Trotterized Hamiltonian simulation. */
 export class HamiltonianSimulationDto {
   @IsInt()

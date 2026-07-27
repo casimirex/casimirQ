@@ -18,6 +18,7 @@ import {
   GroverDto,
   AmplitudeAmplificationDto,
   HamiltonianSimulationDto,
+  HHLDto,
   PhaseEstimationDto,
   QAOADto,
   QFTDto,
@@ -455,6 +456,34 @@ export class AlgorithmsController {
       result: {
         executionTime: result.metrics.executionTimeMs,
         probabilities: output.probabilities,
+      },
+    };
+  }
+
+  /**
+   * Execute HHL: solve a Hermitian linear system A x = b.
+   */
+  @Post('hhl')
+  @HttpCode(HttpStatus.OK)
+  async executeHHL(@Body() dto: HHLDto) {
+    const result = this.algorithmsService.executeHHL(dto.b0, dto.b1);
+    const output = result.output as {
+      matrix: string;
+      rhs: number[];
+      classicalSolution: number[];
+      quantumSolution: { re: number; im: number }[];
+      fidelity: number;
+      successProbability: number;
+    };
+    return {
+      algorithm: 'HHL Algorithm',
+      parameters: { A: output.matrix, b: output.rhs },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        classicalSolution: output.classicalSolution,
+        quantumSolution: output.quantumSolution,
+        fidelity: output.fidelity,
+        successProbability: output.successProbability,
       },
     };
   }
