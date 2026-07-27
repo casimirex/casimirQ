@@ -134,3 +134,17 @@ export class SimonDto {
   @Min(0)
   secret!: number;
 }
+
+/** DTO for Quantum Phase Estimation. */
+export class PhaseEstimationDto {
+  /** The true eigenphase φ ∈ [0, 1) of U = P(2πφ) to estimate. */
+  @IsNumber()
+  @Min(0)
+  phi!: number;
+
+  /** Number of counting qubits (bits of precision). */
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS - 1) // one qubit holds the eigenstate
+  precision!: number;
+}

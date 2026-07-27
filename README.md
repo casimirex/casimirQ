@@ -211,7 +211,7 @@ npm run openapi:generate
 | Visualizations | `/visualizations` | Bloch sphere, circuit diagram (SVG), histogram, 3D state |
 | Backends | `/backends` | list execution targets (simulators, emulated/real hardware) and `:id/run` a circuit on one |
 | Transpiler | `/transpile` | decompose a circuit into a native gate basis (`rz`, `ry`, `cx`) |
-| Algorithms | `/algorithms` | textbook quantum algorithms: `qft`, `grover`, `vqe`, `qaoa`, `shor`, `teleport`, `deutsch-jozsa`, `bernstein-vazirani`, `simon` |
+| Algorithms | `/algorithms` | textbook quantum algorithms: `qft`, `grover`, `vqe`, `qaoa`, `shor`, `teleport`, `deutsch-jozsa`, `bernstein-vazirani`, `simon`, `phase-estimation` |
 | Advanced | `/advanced` | error correction, noise, quantum ML; `batch/*`, `pipeline/*` |
 
 ## Project layout

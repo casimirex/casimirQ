@@ -331,6 +331,36 @@
         ]
       }
     },
+    "/api/v1/algorithms/phase-estimation": {
+      "post": {
+        "operationId": "AlgorithmsController_executePhaseEstimation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhaseEstimationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute Quantum Phase Estimation: estimate a unitary's eigenphase.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
     "/api/v1/algorithms/{name}/verify": {
       "get": {
         "operationId": "AlgorithmsController_verifyAlgorithm",
@@ -2093,6 +2123,26 @@
         "required": [
           "n",
           "secret"
+        ]
+      },
+      "PhaseEstimationDto": {
+        "type": "object",
+        "properties": {
+          "phi": {
+            "type": "number",
+            "description": "The true eigenphase φ ∈ [0, 1) of U = P(2πφ) to estimate.",
+            "minimum": 0
+          },
+          "precision": {
+            "type": "number",
+            "description": "Number of counting qubits (bits of precision).",
+            "minimum": 1,
+            "maximum": 15
+          }
+        },
+        "required": [
+          "phi",
+          "precision"
         ]
       },
       "SimulateNoiseDto": {

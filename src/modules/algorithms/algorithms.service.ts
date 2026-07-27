@@ -8,6 +8,7 @@ import { ShorsAlgorithm } from './implementations/shors-algorithm';
 import { DeutschJozsa, DeutschJozsaOracle } from './implementations/deutsch-jozsa';
 import { BernsteinVazirani } from './implementations/bernstein-vazirani';
 import { SimonsAlgorithm } from './implementations/simons-algorithm';
+import { PhaseEstimation } from './implementations/phase-estimation';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
 import {
   IQuantumAlgorithm,
@@ -94,7 +95,21 @@ export class AlgorithmsService {
         category: 'fundamental',
         factory: () => new SimonsAlgorithm(this.enginesService),
       },
+      {
+        name: 'Quantum Phase Estimation',
+        description: 'Estimates the eigenphase of a unitary to t bits of precision',
+        category: 'fundamental',
+        factory: () => new PhaseEstimation(this.enginesService),
+      },
     ];
+  }
+
+  /**
+   * Execute Quantum Phase Estimation.
+   */
+  executePhaseEstimation(phi: number, precision: number): AlgorithmResult {
+    const algorithm = new PhaseEstimation(this.enginesService);
+    return algorithm.execute(phi, precision);
   }
 
   /**
@@ -214,6 +229,10 @@ export class AlgorithmsService {
       }
       case 'simon': {
         return new SimonsAlgorithm(this.enginesService).verify(3);
+      }
+      case 'phase-estimation':
+      case 'qpe': {
+        return new PhaseEstimation(this.enginesService).verify(5);
       }
       default:
         throw new Error(`Verification not available for ${algorithmName}`);

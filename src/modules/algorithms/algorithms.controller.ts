@@ -16,6 +16,7 @@ import {
   BernsteinVaziraniDto,
   DeutschJozsaDto,
   GroverDto,
+  PhaseEstimationDto,
   QAOADto,
   QFTDto,
   ShorDto,
@@ -308,6 +309,36 @@ export class AlgorithmsController {
         recoveredBits: output.recoveredBits,
         correct: output.correct,
         equationCount: output.equationCount,
+      },
+    };
+  }
+
+  /**
+   * Execute Quantum Phase Estimation: estimate a unitary's eigenphase.
+   */
+  @Post('phase-estimation')
+  @HttpCode(HttpStatus.OK)
+  async executePhaseEstimation(@Body() dto: PhaseEstimationDto) {
+    const result = this.algorithmsService.executePhaseEstimation(dto.phi, dto.precision);
+    const output = result.output as {
+      truePhase: number;
+      estimatedPhase: number;
+      measuredInteger: number;
+      precisionBits: number;
+      error: number;
+      bestProbability: number;
+    };
+    return {
+      algorithm: 'Quantum Phase Estimation',
+      parameters: { phi: dto.phi, precision: dto.precision },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        truePhase: output.truePhase,
+        estimatedPhase: output.estimatedPhase,
+        measuredInteger: output.measuredInteger,
+        precisionBits: output.precisionBits,
+        error: output.error,
+        bestProbability: output.bestProbability,
       },
     };
   }
