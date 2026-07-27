@@ -12,7 +12,17 @@ import {
 import { AlgorithmsService } from './algorithms.service';
 import { JwtAuthGuard } from '../api/guards/jwt-auth.guard';
 import { RateLimitGuard } from '../api/guards/rate-limit.guard';
-import { GroverDto, QAOADto, QFTDto, ShorDto, TeleportDto, VQEDto } from './dto/algorithm.dto';
+import {
+  BernsteinVaziraniDto,
+  DeutschJozsaDto,
+  GroverDto,
+  QAOADto,
+  QFTDto,
+  ShorDto,
+  SimonDto,
+  TeleportDto,
+  VQEDto,
+} from './dto/algorithm.dto';
 
 /**
  * Controller for quantum algorithms API.
@@ -213,6 +223,91 @@ export class AlgorithmsController {
         factors: output.factors,
         period: output.period,
         attempts: output.attempts,
+      },
+    };
+  }
+
+  /**
+   * Execute Deutsch-Jozsa: decide whether an oracle is constant or balanced.
+   */
+  @Post('deutsch-jozsa')
+  @HttpCode(HttpStatus.OK)
+  async executeDeutschJozsa(@Body() dto: DeutschJozsaDto) {
+    const oracle =
+      dto.oracle === 'balanced'
+        ? ({ kind: 'balanced', mask: dto.mask ?? (1 << dto.n) - 1 } as const)
+        : ({ kind: 'constant', value: dto.value ?? 0 } as const);
+    const result = this.algorithmsService.executeDeutschJozsa(dto.n, oracle);
+    const output = result.output as {
+      decision: string;
+      expected: string;
+      correct: boolean;
+      allZeroProbability: number;
+    };
+    return {
+      algorithm: 'Deutsch-Jozsa',
+      parameters: { n: dto.n, oracle: dto.oracle, value: dto.value, mask: dto.mask },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        decision: output.decision,
+        expected: output.expected,
+        correct: output.correct,
+        allZeroProbability: output.allZeroProbability,
+      },
+    };
+  }
+
+  /**
+   * Execute Bernstein-Vazirani: recover a hidden bit string in one query.
+   */
+  @Post('bernstein-vazirani')
+  @HttpCode(HttpStatus.OK)
+  async executeBernsteinVazirani(@Body() dto: BernsteinVaziraniDto) {
+    const result = this.algorithmsService.executeBernsteinVazirani(dto.n, dto.secret);
+    const output = result.output as {
+      secret: number;
+      recovered: number;
+      recoveredBits: string;
+      correct: boolean;
+    };
+    return {
+      algorithm: 'Bernstein-Vazirani',
+      parameters: { n: dto.n, secret: dto.secret },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        secret: output.secret,
+        recovered: output.recovered,
+        recoveredBits: output.recoveredBits,
+        correct: output.correct,
+        successProbability: result.metrics.successProbability,
+      },
+    };
+  }
+
+  /**
+   * Execute Simon's algorithm: find the hidden period of a 2-to-1 function.
+   */
+  @Post('simon')
+  @HttpCode(HttpStatus.OK)
+  async executeSimon(@Body() dto: SimonDto) {
+    const result = this.algorithmsService.executeSimon(dto.n, dto.secret);
+    const output = result.output as {
+      secret: number;
+      recovered: number;
+      recoveredBits: string;
+      correct: boolean;
+      equationCount: number;
+    };
+    return {
+      algorithm: "Simon's Algorithm",
+      parameters: { n: dto.n, secret: dto.secret },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        secret: output.secret,
+        recovered: output.recovered,
+        recoveredBits: output.recoveredBits,
+        correct: output.correct,
+        equationCount: output.equationCount,
       },
     };
   }

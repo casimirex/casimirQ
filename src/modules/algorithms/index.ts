@@ -16,3 +16,6 @@ export { VQE, PauliTerm, createExampleHamiltonians } from './implementations/vqe
 export { QAOA, createExampleGraphs } from './implementations/qaoa';
 export { QuantumTeleportation } from './implementations/quantum-teleportation';
 export { ShorsAlgorithm } from './implementations/shors-algorithm';
+export { DeutschJozsa, DeutschJozsaOracle } from './implementations/deutsch-jozsa';
+export { BernsteinVazirani } from './implementations/bernstein-vazirani';
+export { SimonsAlgorithm } from './implementations/simons-algorithm';

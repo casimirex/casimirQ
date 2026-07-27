@@ -5,6 +5,9 @@ import { VQE, PauliTerm, createExampleHamiltonians } from './implementations/vqe
 import { QAOA, createExampleGraphs } from './implementations/qaoa';
 import { QuantumTeleportation } from './implementations/quantum-teleportation';
 import { ShorsAlgorithm } from './implementations/shors-algorithm';
+import { DeutschJozsa, DeutschJozsaOracle } from './implementations/deutsch-jozsa';
+import { BernsteinVazirani } from './implementations/bernstein-vazirani';
+import { SimonsAlgorithm } from './implementations/simons-algorithm';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
 import {
   IQuantumAlgorithm,
@@ -73,7 +76,49 @@ export class AlgorithmsService {
         category: 'cryptography',
         factory: () => new ShorsAlgorithm(this.enginesService),
       },
+      {
+        name: 'Deutsch-Jozsa',
+        description: 'Decides constant vs balanced oracle with a single query',
+        category: 'fundamental',
+        factory: () => new DeutschJozsa(this.enginesService),
+      },
+      {
+        name: 'Bernstein-Vazirani',
+        description: 'Recovers a hidden bit string s from f(x)=s·x in one query',
+        category: 'fundamental',
+        factory: () => new BernsteinVazirani(this.enginesService),
+      },
+      {
+        name: "Simon's Algorithm",
+        description: 'Finds the hidden period of a 2-to-1 function (exponential speedup)',
+        category: 'fundamental',
+        factory: () => new SimonsAlgorithm(this.enginesService),
+      },
     ];
+  }
+
+  /**
+   * Execute Deutsch-Jozsa.
+   */
+  executeDeutschJozsa(n: number, oracle: DeutschJozsaOracle): AlgorithmResult {
+    const algorithm = new DeutschJozsa(this.enginesService);
+    return algorithm.execute(n, oracle);
+  }
+
+  /**
+   * Execute Bernstein-Vazirani.
+   */
+  executeBernsteinVazirani(n: number, secret: number): AlgorithmResult {
+    const algorithm = new BernsteinVazirani(this.enginesService);
+    return algorithm.execute(n, secret);
+  }
+
+  /**
+   * Execute Simon's algorithm.
+   */
+  executeSimon(n: number, secret: number): AlgorithmResult {
+    const algorithm = new SimonsAlgorithm(this.enginesService);
+    return algorithm.execute(n, secret);
   }
 
   /**
@@ -158,6 +203,17 @@ export class AlgorithmsService {
       case 'shor': {
         const shor = new ShorsAlgorithm(this.enginesService);
         return shor.verify();
+      }
+      case 'deutsch-jozsa':
+      case 'dj': {
+        return new DeutschJozsa(this.enginesService).verify(3);
+      }
+      case 'bernstein-vazirani':
+      case 'bv': {
+        return new BernsteinVazirani(this.enginesService).verify(4);
+      }
+      case 'simon': {
+        return new SimonsAlgorithm(this.enginesService).verify(3);
       }
       default:
         throw new Error(`Verification not available for ${algorithmName}`);
