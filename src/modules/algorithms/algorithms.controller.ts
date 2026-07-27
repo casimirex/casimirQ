@@ -219,6 +219,7 @@ export class AlgorithmsController {
       factors: number[];
       period: number;
       attempts: number;
+      base?: number;
     };
     return {
       algorithm: "Shor's Algorithm",
@@ -226,7 +227,8 @@ export class AlgorithmsController {
       result: {
         executionTime: result.metrics.executionTimeMs,
         factors: output.factors,
-        period: output.period,
+        period: output.period, // the quantum-found order r (−1 if a lucky GCD hit)
+        base: output.base, // the base a whose order was estimated
         attempts: output.attempts,
       },
     };

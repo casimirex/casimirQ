@@ -148,10 +148,13 @@ describe('AlgorithmsController', () => {
     });
 
     it('should factor different numbers', async () => {
-      const numbers = [15, 21, 35];
+      // Genuine quantum order finding runs on the statevector simulator, so N is
+      // bounded by the qubit budget (≤ ~32); these both factor cleanly.
+      const numbers = [15, 21];
       for (const N of numbers) {
         const result = await controller.executeShor({ N });
         expect(result.result.factors).toBeInstanceOf(Array);
+        expect(result.result.factors.length).toBe(2);
       }
     });
   });
