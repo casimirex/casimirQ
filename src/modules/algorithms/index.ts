@@ -23,3 +23,4 @@ export { PhaseEstimation } from './implementations/phase-estimation';
 export { AmplitudeAmplification } from './implementations/amplitude-amplification';
 export { QuantumWalk } from './implementations/quantum-walk';
 export { HamiltonianSimulation } from './implementations/hamiltonian-simulation';
+export { HHL } from './implementations/hhl';

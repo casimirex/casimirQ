@@ -234,6 +234,15 @@ describe('AlgorithmsController', () => {
     });
   });
 
+  describe('POST /algorithms/hhl', () => {
+    it('solves A x = b with high fidelity to the classical solution', async () => {
+      const result = await controller.executeHHL({ b0: 1, b1: 0 });
+      expect(result.algorithm).toBe('HHL Algorithm');
+      expect(result.result.fidelity).toBeGreaterThan(0.99);
+      expect(result.result.classicalSolution[0]).toBeCloseTo(0.9486833, 5);
+    });
+  });
+
   describe('GET /algorithms/:name/verify', () => {
     it('should verify QFT', () => {
       const result = controller.verifyAlgorithm('qft');

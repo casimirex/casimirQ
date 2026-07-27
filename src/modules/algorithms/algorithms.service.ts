@@ -12,6 +12,7 @@ import { PhaseEstimation } from './implementations/phase-estimation';
 import { AmplitudeAmplification } from './implementations/amplitude-amplification';
 import { QuantumWalk } from './implementations/quantum-walk';
 import { HamiltonianSimulation } from './implementations/hamiltonian-simulation';
+import { HHL } from './implementations/hhl';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
 import {
   IQuantumAlgorithm,
@@ -122,7 +123,21 @@ export class AlgorithmsService {
         category: 'fundamental',
         factory: () => new HamiltonianSimulation(this.enginesService),
       },
+      {
+        name: 'HHL Algorithm',
+        description: 'Solves a Hermitian linear system A x = b (prepares |x⟩ ∝ A⁻¹|b⟩)',
+        category: 'fundamental',
+        factory: () => new HHL(this.enginesService),
+      },
     ];
+  }
+
+  /**
+   * Execute the HHL linear-system solver.
+   */
+  executeHHL(b0: number, b1: number): AlgorithmResult {
+    const algorithm = new HHL(this.enginesService);
+    return algorithm.execute(b0, b1);
   }
 
   /**
@@ -305,6 +320,9 @@ export class AlgorithmsService {
       case 'hamiltonian-simulation':
       case 'trotter': {
         return new HamiltonianSimulation(this.enginesService).verify();
+      }
+      case 'hhl': {
+        return new HHL(this.enginesService).verify();
       }
       default:
         throw new Error(`Verification not available for ${algorithmName}`);

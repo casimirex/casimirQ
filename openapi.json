@@ -451,6 +451,36 @@
         ]
       }
     },
+    "/api/v1/algorithms/hhl": {
+      "post": {
+        "operationId": "AlgorithmsController_executeHHL",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HHLDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute HHL: solve a Hermitian linear system A x = b.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
     "/api/v1/algorithms/{name}/verify": {
       "get": {
         "operationId": "AlgorithmsController_verifyAlgorithm",
@@ -2343,6 +2373,23 @@
           "n",
           "terms",
           "time"
+        ]
+      },
+      "HHLDto": {
+        "type": "object",
+        "properties": {
+          "b0": {
+            "type": "number",
+            "description": "Amplitude of |0⟩ in the right-hand side b (need not be normalised)."
+          },
+          "b1": {
+            "type": "number",
+            "description": "Amplitude of |1⟩ in the right-hand side b (need not be normalised)."
+          }
+        },
+        "required": [
+          "b0",
+          "b1"
         ]
       },
       "SimulateNoiseDto": {
