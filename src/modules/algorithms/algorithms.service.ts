@@ -11,6 +11,7 @@ import { SimonsAlgorithm } from './implementations/simons-algorithm';
 import { PhaseEstimation } from './implementations/phase-estimation';
 import { AmplitudeAmplification } from './implementations/amplitude-amplification';
 import { QuantumWalk } from './implementations/quantum-walk';
+import { HamiltonianSimulation } from './implementations/hamiltonian-simulation';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
 import {
   IQuantumAlgorithm,
@@ -115,7 +116,28 @@ export class AlgorithmsService {
         category: 'search',
         factory: () => new QuantumWalk(this.enginesService),
       },
+      {
+        name: 'Hamiltonian Simulation',
+        description: 'Trotterized time evolution e^{-iHt} of a Pauli-sum Hamiltonian',
+        category: 'fundamental',
+        factory: () => new HamiltonianSimulation(this.enginesService),
+      },
     ];
+  }
+
+  /**
+   * Execute Trotterized Hamiltonian simulation.
+   */
+  executeHamiltonianSimulation(
+    n: number,
+    terms: PauliTerm[],
+    time: number,
+    steps = 1,
+    order: 1 | 2 = 1,
+    initialOnes: number[] = [],
+  ): AlgorithmResult {
+    const algorithm = new HamiltonianSimulation(this.enginesService);
+    return algorithm.execute(n, terms, time, steps, order, initialOnes);
   }
 
   /**
@@ -279,6 +301,10 @@ export class AlgorithmsService {
       case 'quantum-walk':
       case 'walk': {
         return new QuantumWalk(this.enginesService).verify();
+      }
+      case 'hamiltonian-simulation':
+      case 'trotter': {
+        return new HamiltonianSimulation(this.enginesService).verify();
       }
       default:
         throw new Error(`Verification not available for ${algorithmName}`);

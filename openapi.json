@@ -421,6 +421,36 @@
         ]
       }
     },
+    "/api/v1/algorithms/hamiltonian-simulation": {
+      "post": {
+        "operationId": "AlgorithmsController_executeHamiltonianSimulation",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HamiltonianSimulationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute Trotterized Hamiltonian simulation e^{-iHt}.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
     "/api/v1/algorithms/{name}/verify": {
       "get": {
         "operationId": "AlgorithmsController_verifyAlgorithm",
@@ -2264,6 +2294,55 @@
         "required": [
           "n",
           "steps"
+        ]
+      },
+      "HamiltonianSimulationDto": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "terms": {
+            "description": "The Hamiltonian as a sum of weighted Pauli strings.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "time": {
+            "type": "number",
+            "description": "Total evolution time t."
+          },
+          "steps": {
+            "type": "number",
+            "description": "Number of Trotter steps r (default 1).",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "order": {
+            "type": "number",
+            "description": "Trotter order: 1 = Lie-Trotter, 2 = symmetric Suzuki (default 1).",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "initialOnes": {
+            "description": "Qubits to flip to |1⟩ before evolving (default: |0…0⟩).",
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "required": [
+          "n",
+          "terms",
+          "time"
         ]
       },
       "SimulateNoiseDto": {

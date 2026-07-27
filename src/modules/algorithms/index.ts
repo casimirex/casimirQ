@@ -22,3 +22,4 @@ export { SimonsAlgorithm } from './implementations/simons-algorithm';
 export { PhaseEstimation } from './implementations/phase-estimation';
 export { AmplitudeAmplification } from './implementations/amplitude-amplification';
 export { QuantumWalk } from './implementations/quantum-walk';
+export { HamiltonianSimulation } from './implementations/hamiltonian-simulation';

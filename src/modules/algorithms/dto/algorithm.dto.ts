@@ -146,6 +146,42 @@ export class SimonDto {
   secret!: number;
 }
 
+/** DTO for Trotterized Hamiltonian simulation. */
+export class HamiltonianSimulationDto {
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS)
+  n!: number;
+
+  /** The Hamiltonian as a sum of weighted Pauli strings. */
+  @IsArray()
+  @ArrayMinSize(1)
+  terms!: PauliTerm[];
+
+  /** Total evolution time t. */
+  @IsNumber()
+  time!: number;
+
+  /** Number of Trotter steps r (default 1). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  steps?: number;
+
+  /** Trotter order: 1 = Lie-Trotter, 2 = symmetric Suzuki (default 1). */
+  @IsOptional()
+  @IsIn([1, 2])
+  order?: 1 | 2;
+
+  /** Qubits to flip to |1⟩ before evolving (default: |0…0⟩). */
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  initialOnes?: number[];
+}
+
 /** DTO for a discrete-time quantum walk. */
 export class QuantumWalkDto {
   /** Number of position qubits (cycle length N = 2^n). */
