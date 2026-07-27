@@ -9,6 +9,7 @@ import { DeutschJozsa, DeutschJozsaOracle } from './implementations/deutsch-jozs
 import { BernsteinVazirani } from './implementations/bernstein-vazirani';
 import { SimonsAlgorithm } from './implementations/simons-algorithm';
 import { PhaseEstimation } from './implementations/phase-estimation';
+import { AmplitudeAmplification } from './implementations/amplitude-amplification';
 import { SimulationEnginesService } from '../simulation-engines/simulation-engines.service';
 import {
   IQuantumAlgorithm,
@@ -101,6 +102,12 @@ export class AlgorithmsService {
         category: 'fundamental',
         factory: () => new PhaseEstimation(this.enginesService),
       },
+      {
+        name: 'Quantum Amplitude Amplification',
+        description: 'Amplifies good-state probability under an arbitrary state preparation',
+        category: 'search',
+        factory: () => new AmplitudeAmplification(this.enginesService),
+      },
     ];
   }
 
@@ -110,6 +117,18 @@ export class AlgorithmsService {
   executePhaseEstimation(phi: number, precision: number): AlgorithmResult {
     const algorithm = new PhaseEstimation(this.enginesService);
     return algorithm.execute(phi, precision);
+  }
+
+  /**
+   * Execute Quantum Amplitude Amplification.
+   */
+  executeAmplitudeAmplification(
+    angles: number[],
+    goodStates: number[],
+    iterations?: number,
+  ): AlgorithmResult {
+    const algorithm = new AmplitudeAmplification(this.enginesService);
+    return algorithm.execute(angles, goodStates, iterations);
   }
 
   /**
@@ -233,6 +252,10 @@ export class AlgorithmsService {
       case 'phase-estimation':
       case 'qpe': {
         return new PhaseEstimation(this.enginesService).verify(5);
+      }
+      case 'amplitude-amplification':
+      case 'qaa': {
+        return new AmplitudeAmplification(this.enginesService).verify();
       }
       default:
         throw new Error(`Verification not available for ${algorithmName}`);

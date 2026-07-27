@@ -6,7 +6,17 @@
  * and sanitizes the bodies). Validation is via class-validator.
  */
 
-import { IsArray, IsIn, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 import { PauliTerm } from '../implementations/vqe';
 
 // Upper bound on qubit counts accepted by the API (matches the engines' limits).
@@ -133,6 +143,29 @@ export class SimonDto {
   @IsInt()
   @Min(0)
   secret!: number;
+}
+
+/** DTO for Quantum Amplitude Amplification. */
+export class AmplitudeAmplificationDto {
+  /** Per-qubit RY angles defining the state preparation A. Length = qubit count. */
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_QUBITS)
+  @IsNumber({}, { each: true })
+  angles!: number[];
+
+  /** Basis states (integers) considered "good" and to be amplified. */
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsInt({ each: true })
+  @Min(0, { each: true })
+  goodStates!: number[];
+
+  /** Optional override for the number of Q iterations (default: optimal). */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  iterations?: number;
 }
 
 /** DTO for Quantum Phase Estimation. */

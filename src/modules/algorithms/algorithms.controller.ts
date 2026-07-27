@@ -16,6 +16,7 @@ import {
   BernsteinVaziraniDto,
   DeutschJozsaDto,
   GroverDto,
+  AmplitudeAmplificationDto,
   PhaseEstimationDto,
   QAOADto,
   QFTDto,
@@ -339,6 +340,42 @@ export class AlgorithmsController {
         precisionBits: output.precisionBits,
         error: output.error,
         bestProbability: output.bestProbability,
+      },
+    };
+  }
+
+  /**
+   * Execute Quantum Amplitude Amplification.
+   */
+  @Post('amplitude-amplification')
+  @HttpCode(HttpStatus.OK)
+  async executeAmplitudeAmplification(@Body() dto: AmplitudeAmplificationDto) {
+    const result = this.algorithmsService.executeAmplitudeAmplification(
+      dto.angles,
+      dto.goodStates,
+      dto.iterations,
+    );
+    const output = result.output as {
+      initialProbability: number;
+      finalProbability: number;
+      theoreticalProbability: number;
+      iterations: number;
+      amplification: number;
+    };
+    return {
+      algorithm: 'Quantum Amplitude Amplification',
+      parameters: {
+        qubits: dto.angles.length,
+        goodStates: dto.goodStates,
+        iterations: dto.iterations,
+      },
+      result: {
+        executionTime: result.metrics.executionTimeMs,
+        initialProbability: output.initialProbability,
+        finalProbability: output.finalProbability,
+        theoreticalProbability: output.theoreticalProbability,
+        iterations: output.iterations,
+        amplification: output.amplification,
       },
     };
   }

@@ -361,6 +361,36 @@
         ]
       }
     },
+    "/api/v1/algorithms/amplitude-amplification": {
+      "post": {
+        "operationId": "AlgorithmsController_executeAmplitudeAmplification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmplitudeAmplificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute Quantum Amplitude Amplification.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
     "/api/v1/algorithms/{name}/verify": {
       "get": {
         "operationId": "AlgorithmsController_verifyAlgorithm",
@@ -2143,6 +2173,37 @@
         "required": [
           "phi",
           "precision"
+        ]
+      },
+      "AmplitudeAmplificationDto": {
+        "type": "object",
+        "properties": {
+          "angles": {
+            "description": "Per-qubit RY angles defining the state preparation A. Length = qubit count.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "goodStates": {
+            "description": "Basis states (integers) considered \"good\" and to be amplified.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "iterations": {
+            "type": "number",
+            "description": "Optional override for the number of Q iterations (default: optimal).",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "angles",
+          "goodStates"
         ]
       },
       "SimulateNoiseDto": {
