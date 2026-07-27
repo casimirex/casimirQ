@@ -391,6 +391,36 @@
         ]
       }
     },
+    "/api/v1/algorithms/quantum-walk": {
+      "post": {
+        "operationId": "AlgorithmsController_executeQuantumWalk",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuantumWalkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Execute a discrete-time quantum walk on a cycle.",
+        "tags": [
+          "Algorithms"
+        ]
+      }
+    },
     "/api/v1/algorithms/{name}/verify": {
       "get": {
         "operationId": "AlgorithmsController_verifyAlgorithm",
@@ -2204,6 +2234,36 @@
         "required": [
           "angles",
           "goodStates"
+        ]
+      },
+      "QuantumWalkDto": {
+        "type": "object",
+        "properties": {
+          "n": {
+            "type": "number",
+            "description": "Number of position qubits (cycle length N = 2^n).",
+            "minimum": 1,
+            "maximum": 15
+          },
+          "steps": {
+            "type": "number",
+            "description": "Number of walk steps.",
+            "minimum": 0,
+            "maximum": 64
+          },
+          "start": {
+            "type": "number",
+            "description": "Starting node (default: cycle midpoint 2^{n-1}).",
+            "minimum": 0
+          },
+          "symmetricCoin": {
+            "type": "boolean",
+            "description": "Prepare the coin in (|0⟩+i|1⟩)/√2 for a symmetric distribution (default true)."
+          }
+        },
+        "required": [
+          "n",
+          "steps"
         ]
       },
       "SimulateNoiseDto": {

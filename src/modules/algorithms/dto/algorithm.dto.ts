@@ -10,6 +10,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNumber,
@@ -143,6 +144,32 @@ export class SimonDto {
   @IsInt()
   @Min(0)
   secret!: number;
+}
+
+/** DTO for a discrete-time quantum walk. */
+export class QuantumWalkDto {
+  /** Number of position qubits (cycle length N = 2^n). */
+  @IsInt()
+  @Min(1)
+  @Max(MAX_QUBITS - 1) // one qubit is the coin
+  n!: number;
+
+  /** Number of walk steps. */
+  @IsInt()
+  @Min(0)
+  @Max(64)
+  steps!: number;
+
+  /** Starting node (default: cycle midpoint 2^{n-1}). */
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  start?: number;
+
+  /** Prepare the coin in (|0⟩+i|1⟩)/√2 for a symmetric distribution (default true). */
+  @IsOptional()
+  @IsBoolean()
+  symmetricCoin?: boolean;
 }
 
 /** DTO for Quantum Amplitude Amplification. */
