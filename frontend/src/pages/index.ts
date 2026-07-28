@@ -5,6 +5,7 @@
 
 export { Dashboard } from './Dashboard';
 export { CircuitBuilder } from './CircuitBuilder';
+export { CircuitLibrary } from './CircuitLibrary';
 export { Simulations } from './Simulations';
 export { Algorithms } from './Algorithms';
 export { Jobs } from './Jobs';

@@ -13,6 +13,7 @@ import {
   ListChecks,
   Activity,
   Layers,
+  Library,
   LogOut,
   User,
   Settings,
@@ -24,6 +25,7 @@ import { useUser } from '@/stores/authStore';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Circuit Builder', href: '/circuits', icon: Cpu },
+  { name: 'Circuit Library', href: '/library', icon: Library },
   { name: 'Simulations', href: '/simulations', icon: Play },
   { name: 'Jobs', href: '/jobs', icon: ListChecks },
   { name: 'Noise Lab', href: '/noise', icon: Activity },

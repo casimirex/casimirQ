@@ -17,6 +17,7 @@ import { AuthLayout } from '@/components/layout/AuthLayout';
 // Pages
 import { Dashboard } from '@/pages/Dashboard';
 import { CircuitBuilder } from '@/pages/CircuitBuilder';
+import { CircuitLibrary } from '@/pages/CircuitLibrary';
 import { Simulations } from '@/pages/Simulations';
 import { Algorithms } from '@/pages/Algorithms';
 import { Jobs } from '@/pages/Jobs';
@@ -79,6 +80,7 @@ function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/circuits" element={<CircuitBuilder />} />
             <Route path="/circuits/:id" element={<CircuitBuilder />} />
+            <Route path="/library" element={<CircuitLibrary />} />
             <Route path="/simulations" element={<Simulations />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/noise" element={<NoiseLab />} />

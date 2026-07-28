@@ -18,9 +18,13 @@ import {
 } from 'lucide-react';
 
 export function Dashboard() {
-  const { data: circuitsData, isLoading } = useCircuits();
+  const { data: circuitsData, isLoading } = useCircuits(1, 500);
 
-  const circuits = circuitsData?.circuits ?? [];
+  // Exclude the seeded Circuit Library entries — they have their own nav and
+  // shouldn't count as the user's own circuits.
+  const circuits = (circuitsData?.circuits ?? []).filter(
+    (c: CircuitSummary) => !c.name.startsWith('Library · ')
+  );
   const recentCircuits = circuits.slice(0, 5);
   const totalQubits = recentCircuits.reduce(
     (sum: number, c: CircuitSummary) => sum + (c.numQubits || 0),
@@ -52,7 +56,7 @@ export function Dashboard() {
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{circuitsData?.pagination?.total || circuits.length || 0}</div>
+            <div className="text-2xl font-bold">{circuits.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {recentCircuits.length} created recently
             </p>
