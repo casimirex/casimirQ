@@ -3,6 +3,10 @@ import {
   assignGate,
   gatesToOperations,
   operationsToGateTypes,
+  placementsToOperations,
+  operationsToPlacements,
+  isPlaceable,
+  type GatePlacement,
 } from './circuitOperations';
 
 describe('assignGate', () => {
@@ -86,5 +90,96 @@ describe('operationsToGateTypes', () => {
     const ops = gatesToOperations(['h', 'cnot'], 2);
     const types = operationsToGateTypes(ops);
     expect(gatesToOperations(types, 2)).toEqual(ops);
+  });
+});
+
+const P = (over: Partial<GatePlacement>): GatePlacement => ({
+  id: 'p',
+  gateType: 'h',
+  qubit: 0,
+  column: 0,
+  ...over,
+});
+
+describe('isPlaceable', () => {
+  it('accepts a single-qubit gate on an in-range wire', () => {
+    expect(isPlaceable(P({ gateType: 'h', qubit: 1 }), 2)).toBe(true);
+  });
+
+  it('rejects a wire outside the circuit', () => {
+    expect(isPlaceable(P({ qubit: 3 }), 2)).toBe(false);
+  });
+
+  it('requires a distinct, in-range target for two-qubit gates', () => {
+    expect(isPlaceable(P({ gateType: 'cnot', qubit: 0, target: 1 }), 2)).toBe(true);
+    expect(isPlaceable(P({ gateType: 'cnot', qubit: 0, target: 0 }), 2)).toBe(false); // same wire
+    expect(isPlaceable(P({ gateType: 'cnot', qubit: 0, target: 5 }), 2)).toBe(false); // out of range
+    expect(isPlaceable(P({ gateType: 'cnot', qubit: 0 }), 2)).toBe(false); // no target
+  });
+});
+
+describe('placementsToOperations', () => {
+  it('orders gates by column then control wire', () => {
+    const placements: GatePlacement[] = [
+      P({ id: 'a', gateType: 'cnot', qubit: 0, target: 1, column: 1 }),
+      P({ id: 'b', gateType: 'h', qubit: 0, column: 0 }),
+    ];
+    expect(placementsToOperations(placements, 2)).toEqual([
+      { gate: 'h', targets: [0] },
+      { gate: 'cnot', targets: [0, 1] },
+    ]);
+  });
+
+  it('honours explicit control/target wires (unlike the sequential model)', () => {
+    const placements: GatePlacement[] = [
+      P({ id: 'a', gateType: 'cnot', qubit: 2, target: 0, column: 0 }),
+    ];
+    expect(placementsToOperations(placements, 3)).toEqual([
+      { gate: 'cnot', targets: [2, 0] },
+    ]);
+  });
+
+  it('attaches params to rotation gates', () => {
+    const placements: GatePlacement[] = [
+      P({ id: 'a', gateType: 'rx', qubit: 1, column: 0, param: 1.25 }),
+    ];
+    expect(placementsToOperations(placements, 2)).toEqual([
+      { gate: 'rx', targets: [1], params: [1.25] },
+    ]);
+  });
+
+  it('drops placements whose wires no longer fit the circuit', () => {
+    const placements: GatePlacement[] = [
+      P({ id: 'a', gateType: 'h', qubit: 0, column: 0 }),
+      P({ id: 'b', gateType: 'x', qubit: 3, column: 1 }), // wire removed
+    ];
+    expect(placementsToOperations(placements, 2)).toEqual([{ gate: 'h', targets: [0] }]);
+  });
+});
+
+describe('operationsToPlacements', () => {
+  const id = (i: number) => `g${i}`;
+
+  it('rebuilds placements from stored operations, one column each', () => {
+    const placements = operationsToPlacements(
+      [
+        { gate: 'h', targets: [0] },
+        { gate: 'cx', targets: [0, 1] },
+      ],
+      id,
+    );
+    expect(placements).toEqual([
+      { id: 'g0', gateType: 'h', qubit: 0, column: 0, param: undefined },
+      { id: 'g1', gateType: 'cnot', qubit: 0, target: 1, column: 1 },
+    ]);
+  });
+
+  it('round-trips a Bell circuit through placements', () => {
+    const ops = [
+      { gate: 'h', targets: [0] },
+      { gate: 'cnot', targets: [0, 1] },
+    ];
+    const placements = operationsToPlacements(ops, id);
+    expect(placementsToOperations(placements, 2)).toEqual(ops);
   });
 });
