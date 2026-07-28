@@ -495,7 +495,12 @@ export function CircuitBuilder() {
   };
 
   const handleSimulate = () => {
-    const operations = placementsToOperations(placements, numQubits);
+    // Measure gates are read-out annotations: the engine already samples every
+    // qubit per shot, so we drop explicit `measure` ops (whose mid-circuit
+    // collapse would otherwise pin every shot to a single outcome).
+    const operations = placementsToOperations(placements, numQubits).filter(
+      (op) => op.gate !== 'measure',
+    );
     simulate.mutate({
       circuitId: currentId ?? 'circuit-builder',
       numQubits,
