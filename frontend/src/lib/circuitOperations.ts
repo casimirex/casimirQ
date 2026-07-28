@@ -121,41 +121,116 @@ export function gatesToOperations(
   return operations;
 }
 
+// ---------------------------------------------------------------------------
+// Full gate catalogue for the visual builder.
+//
+// `shape` decides how a gate is placed and drawn, and what its `wires` mean:
+//   single     : [q]                — one tile on a wire
+//   controlled : [control, target]  — a control dot linked to a target symbol
+//   swap       : [a, b]             — two ✕ marks (exchange the wires)
+//   cc         : [c1, c2, target]   — two control dots + a target symbol
+//   cswap      : [control, a, b]    — a control dot + a ✕/✕ swap
+// ---------------------------------------------------------------------------
+
+export type GateShape = 'single' | 'controlled' | 'swap' | 'cc' | 'cswap';
+export type GateColorKey = 'h' | 'x' | 'y' | 'z' | 'cnot';
+
+export interface GateDef {
+  /** backend gate name (also the palette key) */
+  type: string;
+  /** label on the palette swatch and on boxed tiles */
+  label: string;
+  color: GateColorKey;
+  shape: GateShape;
+  /** how the target of a controlled/cc gate is drawn */
+  targetKind?: 'plus' | 'dot' | 'box';
+  hasParam?: boolean;
+  defaultParam?: number;
+  description: string;
+}
+
+const HALF_PI = Math.PI / 2;
+
+export const GATE_DEFS: GateDef[] = [
+  // single-qubit
+  { type: 'h', label: 'H', color: 'h', shape: 'single', description: 'Hadamard' },
+  { type: 'x', label: 'X', color: 'x', shape: 'single', description: 'Pauli-X' },
+  { type: 'y', label: 'Y', color: 'y', shape: 'single', description: 'Pauli-Y' },
+  { type: 'z', label: 'Z', color: 'z', shape: 'single', description: 'Pauli-Z' },
+  { type: 's', label: 'S', color: 'h', shape: 'single', description: 'Phase' },
+  { type: 'sdg', label: 'S†', color: 'h', shape: 'single', description: 'S-dagger' },
+  { type: 't', label: 'T', color: 'h', shape: 'single', description: 'T' },
+  { type: 'tdg', label: 'T†', color: 'h', shape: 'single', description: 'T-dagger' },
+  { type: 'rx', label: 'Rx', color: 'x', shape: 'single', hasParam: true, defaultParam: HALF_PI, description: 'Rotation X' },
+  { type: 'ry', label: 'Ry', color: 'y', shape: 'single', hasParam: true, defaultParam: HALF_PI, description: 'Rotation Y' },
+  { type: 'rz', label: 'Rz', color: 'z', shape: 'single', hasParam: true, defaultParam: HALF_PI, description: 'Rotation Z' },
+  { type: 'p', label: 'P', color: 'h', shape: 'single', hasParam: true, defaultParam: HALF_PI, description: 'Phase (λ)' },
+  // two-qubit controlled
+  { type: 'cnot', label: '⊕', color: 'cnot', shape: 'controlled', targetKind: 'plus', description: 'CNOT' },
+  { type: 'cz', label: 'Z', color: 'z', shape: 'controlled', targetKind: 'dot', description: 'Controlled-Z' },
+  { type: 'cy', label: 'Y', color: 'y', shape: 'controlled', targetKind: 'box', description: 'Controlled-Y' },
+  { type: 'ch', label: 'H', color: 'h', shape: 'controlled', targetKind: 'box', description: 'Controlled-H' },
+  { type: 'cp', label: 'P', color: 'h', shape: 'controlled', targetKind: 'box', hasParam: true, defaultParam: HALF_PI, description: 'Controlled-Phase' },
+  { type: 'crx', label: 'Rx', color: 'x', shape: 'controlled', targetKind: 'box', hasParam: true, defaultParam: HALF_PI, description: 'Controlled-Rx' },
+  { type: 'cry', label: 'Ry', color: 'y', shape: 'controlled', targetKind: 'box', hasParam: true, defaultParam: HALF_PI, description: 'Controlled-Ry' },
+  { type: 'crz', label: 'Rz', color: 'z', shape: 'controlled', targetKind: 'box', hasParam: true, defaultParam: HALF_PI, description: 'Controlled-Rz' },
+  // swap
+  { type: 'swap', label: 'SWAP', color: 'cnot', shape: 'swap', description: 'SWAP' },
+  // three-qubit
+  { type: 'ccx', label: '⊕', color: 'cnot', shape: 'cc', targetKind: 'plus', description: 'Toffoli (CCX)' },
+  { type: 'ccz', label: 'Z', color: 'z', shape: 'cc', targetKind: 'dot', description: 'CCZ' },
+  { type: 'cswap', label: 'SWAP', color: 'cnot', shape: 'cswap', description: 'Fredkin (CSWAP)' },
+];
+
+const GATE_DEF_MAP: Record<string, GateDef> = Object.fromEntries(
+  GATE_DEFS.map((g) => [g.type, g]),
+);
+
+/** Look up a gate definition by backend name (via placement aliases). */
+export function gateDef(type: string): GateDef | undefined {
+  const t = type.toLowerCase();
+  return GATE_DEF_MAP[PLACEMENT_ALIASES[t] ?? t];
+}
+
+/** How many wires a gate occupies (single=1, controlled/swap=2, cc/cswap=3). */
+export function gateWireCount(shape: GateShape): number {
+  return shape === 'single' ? 1 : shape === 'controlled' || shape === 'swap' ? 2 : 3;
+}
+
+/** Aliases from stored/backend gate names to builder palette keys. */
+const PLACEMENT_ALIASES: Record<string, string> = {
+  cx: 'cnot',
+  toffoli: 'ccx',
+  ccnot: 'ccx',
+  fredkin: 'cswap',
+};
+
 /**
- * A gate the user has placed at an explicit position on the canvas: a specific
- * qubit wire and time column. Two-qubit gates additionally carry a `target`
- * wire. This is the model behind manual (drag-and-drop) circuit editing.
+ * A gate the user has placed on the canvas at an explicit time `column`, on a
+ * set of `wires` whose meaning depends on the gate's shape (see GATE_DEFS).
  */
 export interface GatePlacement {
   id: string;
   gateType: string;
-  /** wire the gate sits on (control wire for two-qubit gates) */
-  qubit: number;
   /** time column (left-to-right order) */
   column: number;
-  /** target wire for two-qubit gates */
-  target?: number;
-  /** rotation angle for parameterised gates */
+  /** the wires this gate occupies, in backend target order */
+  wires: number[];
+  /** rotation/phase angle for parameterised gates */
   param?: number;
 }
 
-/** A placement can be simulated iff its wires are valid for the circuit. */
+/** A placement can be simulated iff every wire is valid, distinct, and known. */
 export function isPlaceable(p: GatePlacement, numQubits: number): boolean {
-  const spec = GATE_SPECS[p.gateType];
-  if (!spec || p.qubit < 0 || p.qubit >= numQubits) return false;
-  if (spec.arity === 2) {
-    return (
-      p.target != null && p.target >= 0 && p.target < numQubits && p.target !== p.qubit
-    );
-  }
-  return true;
+  const def = gateDef(p.gateType);
+  if (!def || p.wires.length !== gateWireCount(def.shape)) return false;
+  if (p.wires.some((w) => w < 0 || w >= numQubits)) return false;
+  return new Set(p.wires).size === p.wires.length; // all distinct
 }
 
 /**
- * Convert explicitly-placed gates into backend operations. Placements are
- * ordered by column (then control wire) so the time-sequence is preserved, and
- * any placement that no longer fits the circuit (e.g. a wire removed by
- * lowering the qubit count) is dropped.
+ * Convert explicitly-placed gates into backend operations, ordered by column
+ * (then top wire). Placements that no longer fit the circuit are dropped.
  */
 export function placementsToOperations(
   placements: GatePlacement[],
@@ -164,52 +239,36 @@ export function placementsToOperations(
   return placements
     .filter((p) => isPlaceable(p, numQubits))
     .slice()
-    .sort((a, b) => a.column - b.column || a.qubit - b.qubit)
+    .sort((a, b) => a.column - b.column || a.wires[0] - b.wires[0])
     .map((p) => {
-      const spec = GATE_SPECS[p.gateType];
-      if (spec.arity === 2) {
-        return { gate: p.gateType, targets: [p.qubit, p.target as number] };
-      }
-      if (spec.hasParam) {
-        return {
-          gate: p.gateType,
-          targets: [p.qubit],
-          params: [p.param ?? spec.defaultParam ?? Math.PI / 2],
-        };
-      }
-      return { gate: p.gateType, targets: [p.qubit] };
+      const def = gateDef(p.gateType)!;
+      const op: SimulationOperation = { gate: p.gateType, targets: p.wires.slice() };
+      if (def.hasParam) op.params = [p.param ?? def.defaultParam ?? HALF_PI];
+      return op;
     });
 }
 
 /**
- * Rebuild placements from stored operations when loading a saved circuit.
- * Each operation is assigned to its stored target wire(s) and laid out in one
- * column per operation, preserving order left-to-right.
+ * Rebuild placements from stored operations when loading a saved circuit, one
+ * column per operation. Operations the builder can't represent (e.g. measure,
+ * barrier, arbitrary mcx/mcz) are skipped — they remain in the saved circuit.
  */
 export function operationsToPlacements(
   operations: Array<{ gate: string; targets?: number[]; params?: number[] }>,
   makeId: (i: number) => string,
 ): GatePlacement[] {
-  return operations.map((op, i) => {
-    const gate = op.gate.toLowerCase();
-    const type = PALETTE_ALIASES[gate] ?? gate;
-    const spec = GATE_SPECS[type];
+  const out: GatePlacement[] = [];
+  operations.forEach((op, i) => {
+    const def = gateDef(op.gate);
     const targets = op.targets ?? [];
-    if (spec?.arity === 2) {
-      return {
-        id: makeId(i),
-        gateType: type,
-        qubit: targets[0] ?? 0,
-        target: targets[1] ?? 1,
-        column: i,
-      };
-    }
-    return {
+    if (!def || targets.length !== gateWireCount(def.shape)) return;
+    out.push({
       id: makeId(i),
-      gateType: type,
-      qubit: targets[0] ?? 0,
+      gateType: def.type,
       column: i,
+      wires: targets.slice(),
       param: op.params?.[0],
-    };
+    });
   });
+  return out;
 }

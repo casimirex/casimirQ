@@ -24,10 +24,13 @@ import {
   useCircuit,
 } from '@/api/hooks/useCircuits';
 import {
-  GATE_SPECS,
+  GATE_DEFS,
+  gateDef,
+  gateWireCount,
   placementsToOperations,
   operationsToPlacements,
   type GatePlacement,
+  type GateDef,
 } from '@/lib/circuitOperations';
 import { SimulationResults } from '@/components/simulation/SimulationResults';
 import { Button } from '@/components/ui/Button';
@@ -43,20 +46,6 @@ import {
   Loader2,
   FolderOpen,
 } from 'lucide-react';
-
-// Gate types for the palette
-const GATE_TYPES = [
-  { type: 'h', name: 'H', color: 'h', description: 'Hadamard' },
-  { type: 'x', name: 'X', color: 'x', description: 'Pauli-X' },
-  { type: 'y', name: 'Y', color: 'y', description: 'Pauli-Y' },
-  { type: 'z', name: 'Z', color: 'z', description: 'Pauli-Z' },
-  { type: 'cnot', name: '⊕', color: 'cnot', description: 'CNOT' },
-  { type: 's', name: 'S', color: 'h', description: 'Phase' },
-  { type: 't', name: 'T', color: 'h', description: 'T' },
-  { type: 'rx', name: 'Rx', color: 'x', description: 'Rotation X' },
-  { type: 'ry', name: 'Ry', color: 'y', description: 'Rotation Y' },
-  { type: 'rz', name: 'Rz', color: 'z', description: 'Rotation Z' },
-];
 
 /**
  * Single source of truth for gate colors, shared by the palette and the
@@ -76,42 +65,31 @@ const COL_GAP = 84; // horizontal distance between time steps
 const ORIGIN_X = 96; // left margin, leaving room for |q⟩ labels
 const TOP = 54; // y of the first wire
 const GATE = 48; // gate tile size
-const AMBER = '#f59e0b'; // CNOT control/target/connector color (matches bg-amber-500)
+const AMBER = '#f59e0b'; // control / target / connector / swap color
 const WIRE_COLOR = '#2a3d5c';
 const laneY = (q: number) => TOP + q * LANE_GAP;
 
+/** How a single wire's symbol is drawn. */
+type SymbolKind = 'tile' | 'dot' | 'plus' | 'x';
 interface GateNodeData {
-  role: 'single' | 'control' | 'target';
+  kind: SymbolKind;
   gateType: string;
-  qubit: number;
   label?: string;
   color?: string;
-  /** target wire, so a control node can draw its connector */
-  targetQubit?: number;
 }
 
 const amberGlow = (on: boolean) => (on ? '0 0 0 3px rgba(245,158,11,0.45)' : 'none');
 
 /**
- * A placed gate. Single-qubit gates are a colored tile matching their palette
- * swatch. A CNOT is two independently-draggable nodes — a control dot and a ⊕
- * target — joined by a connector drawn from the control node.
+ * One wire's worth of a placed gate: a colored tile (single-qubit gates and
+ * boxed controlled targets), a control/Z dot, a ⊕ target, or a ✕ swap mark.
  */
 function GateNode({ data, selected }: NodeProps<GateNodeData>) {
-  if (data.role === 'control') {
-    const delta = ((data.targetQubit ?? data.qubit) - data.qubit) * LANE_GAP;
+  const box = { width: GATE, height: GATE } as const;
+
+  if (data.kind === 'dot') {
     return (
-      <div style={{ width: GATE, height: GATE }} className="relative" title="CNOT control — drag to another wire">
-        <div
-          style={{
-            position: 'absolute',
-            left: GATE / 2 - 1,
-            top: delta >= 0 ? GATE / 2 : GATE / 2 + delta,
-            width: 2,
-            height: Math.abs(delta),
-            background: AMBER,
-          }}
-        />
+      <div style={box} className="relative" title={`${data.gateType.toUpperCase()} — drag to move`}>
         <div
           style={{
             position: 'absolute',
@@ -128,9 +106,9 @@ function GateNode({ data, selected }: NodeProps<GateNodeData>) {
     );
   }
 
-  if (data.role === 'target') {
+  if (data.kind === 'plus') {
     return (
-      <div style={{ width: GATE, height: GATE }} className="relative" title="CNOT target — drag to another wire">
+      <div style={box} className="relative" title={`${data.gateType.toUpperCase()} target — drag to move`}>
         <div
           style={{
             position: 'absolute',
@@ -156,15 +134,29 @@ function GateNode({ data, selected }: NodeProps<GateNodeData>) {
     );
   }
 
+  if (data.kind === 'x') {
+    return (
+      <div style={box} className="relative" title="SWAP — drag to move">
+        <svg width={GATE} height={GATE} style={{ position: 'absolute', inset: 0 }}>
+          <line x1={GATE / 2 - 8} y1={GATE / 2 - 8} x2={GATE / 2 + 8} y2={GATE / 2 + 8} stroke={AMBER} strokeWidth={2.6} />
+          <line x1={GATE / 2 - 8} y1={GATE / 2 + 8} x2={GATE / 2 + 8} y2={GATE / 2 - 8} stroke={AMBER} strokeWidth={2.6} />
+          {selected && <circle cx={GATE / 2} cy={GATE / 2} r={13} fill="none" stroke={AMBER} strokeWidth={1.5} strokeDasharray="3 2" />}
+        </svg>
+      </div>
+    );
+  }
+
+  // tile
   const c = GATE_COLORS[data.color ?? 'h'] ?? GATE_COLORS.h;
   return (
     <div
       className={[
-        'flex items-center justify-center rounded-lg font-mono text-base font-bold text-white shadow-lg',
+        'flex items-center justify-center rounded-lg font-mono font-bold text-white shadow-lg',
+        (data.label?.length ?? 1) > 2 ? 'text-sm' : 'text-base',
         c.bg,
         selected ? `ring-2 ring-offset-2 ring-offset-background ${c.ring}` : '',
       ].join(' ')}
-      style={{ width: GATE, height: GATE }}
+      style={box}
       title={`${data.gateType.toUpperCase()} — drag to move, Delete to remove`}
     >
       {data.label}
@@ -184,7 +176,12 @@ function WireNode({ data }: NodeProps<{ label: string; width: number }>) {
   );
 }
 
-/** A dashed marker showing where a pending CNOT control has been placed. */
+/** The vertical connector joining the wires of a multi-qubit gate. */
+function LinkNode({ data }: NodeProps<{ height: number }>) {
+  return <div style={{ width: 2, height: data.height, background: AMBER }} />;
+}
+
+/** A dashed marker showing a pending (not-yet-complete) multi-qubit placement. */
 function GhostNode() {
   return (
     <div style={{ width: GATE, height: GATE }} className="relative">
@@ -203,27 +200,47 @@ function GhostNode() {
   );
 }
 
-const nodeTypes: NodeTypes = { gate: GateNode, wire: WireNode, ghost: GhostNode };
+const nodeTypes: NodeTypes = { gate: GateNode, wire: WireNode, link: LinkNode, ghost: GhostNode };
 
-/** Map a placement's (qubit, column) to the top-left of its gate tile. */
-const gatePos = (qubit: number, column: number) => ({
+/** Top-left of a gate tile centered on (wire, column). */
+const gatePos = (wire: number, column: number) => ({
   x: ORIGIN_X + column * COL_GAP - GATE / 2,
-  y: laneY(qubit) - GATE / 2,
+  y: laneY(wire) - GATE / 2,
 });
 
 /**
- * Turn explicitly-placed gates into React Flow nodes, one per wire plus the
- * gate nodes. Each single-qubit gate is one node; each CNOT is a control node
- * and a target node (both draggable) at the same column.
+ * The per-wire symbols for a placed gate, in `wires` order (so index i maps to
+ * `placement.wires[i]`). Drives both rendering and drag/index bookkeeping.
+ */
+function gateSymbols(def: GateDef, wires: number[]): { wire: number; kind: SymbolKind }[] {
+  const boxOrKind: SymbolKind =
+    def.targetKind === 'plus' ? 'plus' : def.targetKind === 'dot' ? 'dot' : 'tile';
+  switch (def.shape) {
+    case 'single':
+      return [{ wire: wires[0], kind: 'tile' }];
+    case 'controlled':
+      return [{ wire: wires[0], kind: 'dot' }, { wire: wires[1], kind: boxOrKind }];
+    case 'swap':
+      return [{ wire: wires[0], kind: 'x' }, { wire: wires[1], kind: 'x' }];
+    case 'cc':
+      return [{ wire: wires[0], kind: 'dot' }, { wire: wires[1], kind: 'dot' }, { wire: wires[2], kind: boxOrKind }];
+    case 'cswap':
+      return [{ wire: wires[0], kind: 'dot' }, { wire: wires[1], kind: 'x' }, { wire: wires[2], kind: 'x' }];
+  }
+}
+
+/**
+ * Turn explicitly-placed gates into React Flow nodes: one per qubit wire, then
+ * for each placement a connector (multi-wire) plus one draggable symbol node per
+ * wire it touches.
  */
 function buildFlowNodes(
   placements: GatePlacement[],
   numQubits: number,
-  pending: { qubit: number; column: number } | null,
+  pending: { gateType: string; wires: number[]; column: number } | null,
 ): Node[] {
   const maxCol = placements.reduce((m, p) => Math.max(m, p.column), pending?.column ?? 0);
-  const cols = Math.max(maxCol + 2, 8);
-  const width = ORIGIN_X + cols * COL_GAP;
+  const width = ORIGIN_X + Math.max(maxCol + 2, 8) * COL_GAP;
 
   const wires: Node[] = Array.from({ length: numQubits }, (_, q) => ({
     id: `wire-${q}`,
@@ -238,53 +255,52 @@ function buildFlowNodes(
 
   const gates: Node[] = [];
   for (const p of placements) {
-    const spec = GATE_SPECS[p.gateType];
-    if (!spec || p.qubit < 0 || p.qubit >= numQubits) continue;
+    const def = gateDef(p.gateType);
+    if (!def || p.wires.length !== gateWireCount(def.shape)) continue;
+    if (p.wires.some((w) => w < 0 || w >= numQubits)) continue;
 
-    if (spec.arity === 2) {
-      if (p.target == null || p.target < 0 || p.target >= numQubits) continue;
+    if (p.wires.length > 1) {
+      const lo = Math.min(...p.wires);
+      const hi = Math.max(...p.wires);
       gates.push({
-        id: `${p.id}::c`,
-        type: 'gate',
-        position: gatePos(p.qubit, p.column),
-        data: { role: 'control', gateType: p.gateType, qubit: p.qubit, targetQubit: p.target },
-        zIndex: 2,
+        id: `${p.id}::link`,
+        type: 'link',
+        position: { x: ORIGIN_X + p.column * COL_GAP - 1, y: laneY(lo) },
+        data: { height: (hi - lo) * LANE_GAP },
+        draggable: false,
+        selectable: false,
+        zIndex: 1,
       });
+    }
+
+    gateSymbols(def, p.wires).forEach((sym, i) => {
       gates.push({
-        id: `${p.id}::t`,
+        id: `${p.id}::w${i}`,
         type: 'gate',
-        position: gatePos(p.target, p.column),
-        data: { role: 'target', gateType: p.gateType, qubit: p.target },
-        zIndex: 2,
-      });
-    } else {
-      const meta = GATE_TYPES.find((g) => g.type === p.gateType);
-      gates.push({
-        id: p.id,
-        type: 'gate',
-        position: gatePos(p.qubit, p.column),
+        position: gatePos(sym.wire, p.column),
         data: {
-          role: 'single',
-          label: meta?.name ?? p.gateType,
-          color: meta?.color ?? 'h',
+          kind: sym.kind,
           gateType: p.gateType,
-          qubit: p.qubit,
+          label: sym.kind === 'tile' ? def.label : undefined,
+          color: def.color,
         },
         zIndex: 2,
       });
-    }
+    });
   }
 
   const extras: Node[] = [];
   if (pending) {
-    extras.push({
-      id: 'ghost',
-      type: 'ghost',
-      position: gatePos(pending.qubit, pending.column),
-      data: {},
-      draggable: false,
-      selectable: false,
-      zIndex: 3,
+    pending.wires.forEach((w, i) => {
+      extras.push({
+        id: `ghost-${i}`,
+        type: 'ghost',
+        position: gatePos(w, pending.column),
+        data: {},
+        draggable: false,
+        selectable: false,
+        zIndex: 3,
+      });
     });
   }
 
@@ -298,7 +314,8 @@ export function CircuitBuilder() {
   const [flowNodes, setFlowNodes, onNodesChange] = useNodesState([]);
   const [placements, setPlacements] = useState<GatePlacement[]>([]);
   const [activeGate, setActiveGate] = useState<string | null>(null);
-  const [pendingControl, setPendingControl] = useState<{ qubit: number; column: number } | null>(
+  // A partially-placed multi-qubit gate: wires clicked so far, at a fixed column.
+  const [pending, setPending] = useState<{ gateType: string; wires: number[]; column: number } | null>(
     null,
   );
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -341,7 +358,7 @@ export function CircuitBuilder() {
     setPlacements(
       operationsToPlacements(circuit.operations ?? [], (i) => `p-load-${circuit.id}-${i}`),
     );
-    setPendingControl(null);
+    setPending(null);
     setActiveGate(null);
   }, [circuitQuery.data, setCircuitName, setNumQubits]);
 
@@ -353,17 +370,25 @@ export function CircuitBuilder() {
     }
   }, [id]);
 
-  // Re-layout whenever placements, qubit count, or the pending CNOT change.
+  // Re-layout whenever placements, qubit count, or the pending gate change.
   useEffect(() => {
-    setFlowNodes(buildFlowNodes(placements, numQubits, pendingControl));
-  }, [placements, numQubits, pendingControl, setFlowNodes]);
+    setFlowNodes(buildFlowNodes(placements, numQubits, pending));
+  }, [placements, numQubits, pending, setFlowNodes]);
 
   const makeId = () => `p-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   // Toggle which palette gate we're about to place.
   const selectGate = (type: string) => {
     setActiveGate((prev) => (prev === type ? null : type));
-    setPendingControl(null);
+    setPending(null);
+  };
+
+  // Add a completed placement, clearing anything it would overlap.
+  const addPlacement = (def: GateDef, wires: number[], column: number) => {
+    setPlacements((prev) => [
+      ...prev.filter((p) => !(p.column === column && p.wires.some((w) => wires.includes(w)))),
+      { id: makeId(), gateType: def.type, column, wires, param: def.hasParam ? def.defaultParam : undefined },
+    ]);
   };
 
   // Convert a canvas click into the nearest (qubit, column) cell.
@@ -378,68 +403,56 @@ export function CircuitBuilder() {
     return { qubit, column };
   };
 
-  // Place the active gate where the user clicked empty canvas.
+  // Place the active gate. Single-qubit gates land in one click; multi-qubit
+  // gates collect their wires across clicks (all sharing the first column).
   const handlePaneClick = (event: React.MouseEvent) => {
     if (!activeGate) return;
-    const spec = GATE_SPECS[activeGate];
+    const def = gateDef(activeGate);
     const cell = cellFromEvent(event);
-    if (!spec || !cell) return;
+    if (!def || !cell) return;
 
-    if (spec.arity === 2) {
-      if (numQubits < 2) {
-        toast.error('Add a second qubit before placing a CNOT');
-        return;
-      }
-      if (!pendingControl) {
-        setPendingControl({ qubit: cell.qubit, column: cell.column });
-        return;
-      }
-      if (cell.qubit === pendingControl.qubit) return; // target must differ from control
-      const control = pendingControl;
-      setPlacements((prev) => [
-        ...prev.filter(
-          (p) =>
-            !(p.column === control.column && (p.qubit === control.qubit || p.qubit === cell.qubit)),
-        ),
-        {
-          id: makeId(),
-          gateType: 'cnot',
-          qubit: control.qubit,
-          target: cell.qubit,
-          column: control.column,
-        },
-      ]);
-      setPendingControl(null);
+    const need = gateWireCount(def.shape);
+    if (need === 1) {
+      addPlacement(def, [cell.qubit], cell.column);
       return;
     }
-
-    // single-qubit: replace anything already sitting on this exact cell
-    setPlacements((prev) => [
-      ...prev.filter((p) => !(p.column === cell.column && p.qubit === cell.qubit)),
-      {
-        id: makeId(),
-        gateType: activeGate,
-        qubit: cell.qubit,
-        column: cell.column,
-        param: spec.hasParam ? spec.defaultParam : undefined,
-      },
-    ]);
+    if (numQubits < need) {
+      toast.error(`Add more qubits — ${def.label} needs ${need} wires`);
+      return;
+    }
+    if (!pending || pending.gateType !== activeGate) {
+      setPending({ gateType: activeGate, wires: [cell.qubit], column: cell.column });
+      return;
+    }
+    if (pending.wires.includes(cell.qubit)) return; // each wire must be distinct
+    const wires = [...pending.wires, cell.qubit];
+    if (wires.length < need) {
+      setPending({ ...pending, wires });
+      return;
+    }
+    addPlacement(def, wires, pending.column);
+    setPending(null);
   };
 
-  // Snap a dragged gate to the nearest wire/column and update its placement.
+  // Snap a dragged symbol to the nearest wire/column and update its placement.
   const handleNodeDragStop = (_event: React.MouseEvent, node: Node) => {
-    const centerX = node.position.x + GATE / 2;
-    const centerY = node.position.y + GATE / 2;
-    const column = Math.max(0, Math.round((centerX - ORIGIN_X) / COL_GAP));
-    const qubit = Math.min(numQubits - 1, Math.max(0, Math.round((centerY - TOP) / LANE_GAP)));
-    const [pid, role] = node.id.split('::');
+    const [pid, tag] = node.id.split('::');
+    if (!tag || !tag.startsWith('w')) return; // only symbol nodes carry a wire
+    const wireIndex = Number(tag.slice(1));
+    const column = Math.max(0, Math.round((node.position.x + GATE / 2 - ORIGIN_X) / COL_GAP));
+    const wire = Math.min(numQubits - 1, Math.max(0, Math.round((node.position.y + GATE / 2 - TOP) / LANE_GAP)));
 
     setPlacements((prev) =>
       prev.map((p) => {
         if (p.id !== pid) return p;
-        if (role === 'c') return { ...p, qubit, column };
-        if (role === 't') return qubit === p.qubit ? p : { ...p, target: qubit }; // keep control/target distinct
-        return { ...p, qubit, column };
+        // If the new wire collides with another of this gate's wires, only move
+        // the whole gate's column; otherwise reassign this symbol's wire too.
+        if (p.wires.some((w, idx) => idx !== wireIndex && w === wire)) {
+          return { ...p, column };
+        }
+        const wires = p.wires.slice();
+        wires[wireIndex] = wire;
+        return { ...p, wires, column };
       }),
     );
   };
@@ -491,7 +504,7 @@ export function CircuitBuilder() {
 
   const handleClear = () => {
     setPlacements([]);
-    setPendingControl(null);
+    setPending(null);
     setActiveGate(null);
   };
 
@@ -617,41 +630,60 @@ export function CircuitBuilder() {
       </Card>
 
       {/* Placement hint */}
-      {activeGate && (
-        <div className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm text-primary">
-          {GATE_SPECS[activeGate]?.arity === 2
-            ? pendingControl
-              ? 'CNOT — now click the target qubit wire (must differ from the control).'
-              : 'CNOT — click the control qubit wire, then click the target qubit wire.'
-            : `Click a qubit wire to place ${activeGate.toUpperCase()}. Drag placed gates to move them; select one and press Delete to remove.`}
-        </div>
-      )}
+      {(() => {
+        if (!activeGate) return null;
+        const def = gateDef(activeGate);
+        if (!def) return null;
+        const need = gateWireCount(def.shape);
+        let msg: string;
+        if (need === 1) {
+          msg = `Click a qubit wire to place ${def.label}. Drag placed gates to move them; select one and press Delete to remove.`;
+        } else {
+          const roles =
+            def.shape === 'swap'
+              ? ['first', 'second']
+              : def.shape === 'cswap'
+                ? ['control', 'first swap', 'second swap']
+                : def.shape === 'cc'
+                  ? ['control 1', 'control 2', 'target']
+                  : ['control', 'target'];
+          const next = pending && pending.gateType === activeGate ? pending.wires.length : 0;
+          msg = `${def.description}: click the ${roles[next]} qubit wire${next < need - 1 ? ', then continue' : ''}.`;
+        }
+        return (
+          <div className="rounded-lg border border-primary/40 bg-primary/10 px-4 py-2 text-sm text-primary">
+            {msg}
+          </div>
+        );
+      })()}
 
       {/* Circuit canvas */}
       <div className="grid grid-cols-[200px_1fr] gap-4">
         {/* Gate palette */}
         <Card className="glass p-4">
           <h3 className="text-sm font-semibold mb-3">Gates</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {GATE_TYPES.map((gate) => (
+          <div className="grid max-h-[540px] grid-cols-2 gap-2 overflow-y-auto pr-1">
+            {GATE_DEFS.map((gate) => (
               <button
                 key={gate.type}
                 onClick={() => selectGate(gate.type)}
+                title={gate.description}
                 className={`
-                  gate-palette-item p-3 rounded-lg border transition-all
+                  gate-palette-item p-2.5 rounded-lg border transition-all
                   hover:scale-105 active:scale-95
                   ${activeGate === gate.type ? 'ring-2 ring-primary' : ''}
                 `}
               >
                 <div className={`
                   w-8 h-8 mx-auto mb-1 flex items-center justify-center
-                  font-bold text-sm text-white
-                  ${gate.color === 'cnot' ? 'rounded-full' : 'rounded'}
+                  font-bold text-white
+                  ${gate.label.length > 2 ? 'text-[10px]' : 'text-sm'}
+                  ${gate.type === 'cnot' ? 'rounded-full' : 'rounded'}
                   ${GATE_COLORS[gate.color]?.bg ?? 'bg-purple-500'}
                 `}>
-                  {gate.name}
+                  {gate.label}
                 </div>
-                <span className="text-xs text-muted-foreground">
+                <span className="block truncate text-[11px] text-muted-foreground">
                   {gate.description}
                 </span>
               </button>
