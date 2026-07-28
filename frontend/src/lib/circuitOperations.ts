@@ -132,8 +132,8 @@ export function gatesToOperations(
 //   cswap      : [control, a, b]    — a control dot + a ✕/✕ swap
 // ---------------------------------------------------------------------------
 
-export type GateShape = 'single' | 'controlled' | 'swap' | 'cc' | 'cswap';
-export type GateColorKey = 'h' | 'x' | 'y' | 'z' | 'cnot';
+export type GateShape = 'single' | 'controlled' | 'swap' | 'cc' | 'cswap' | 'measure';
+export type GateColorKey = 'h' | 'x' | 'y' | 'z' | 'cnot' | 'meas';
 
 export interface GateDef {
   /** backend gate name (also the palette key) */
@@ -180,6 +180,8 @@ export const GATE_DEFS: GateDef[] = [
   { type: 'ccx', label: '⊕', color: 'cnot', shape: 'cc', targetKind: 'plus', description: 'Toffoli (CCX)' },
   { type: 'ccz', label: 'Z', color: 'z', shape: 'cc', targetKind: 'dot', description: 'CCZ' },
   { type: 'cswap', label: 'SWAP', color: 'cnot', shape: 'cswap', description: 'Fredkin (CSWAP)' },
+  // measurement
+  { type: 'measure', label: 'M', color: 'meas', shape: 'measure', description: 'Measure' },
 ];
 
 const GATE_DEF_MAP: Record<string, GateDef> = Object.fromEntries(
@@ -192,9 +194,11 @@ export function gateDef(type: string): GateDef | undefined {
   return GATE_DEF_MAP[PLACEMENT_ALIASES[t] ?? t];
 }
 
-/** How many wires a gate occupies (single=1, controlled/swap=2, cc/cswap=3). */
+/** How many wires a gate occupies (single/measure=1, controlled/swap=2, cc/cswap=3). */
 export function gateWireCount(shape: GateShape): number {
-  return shape === 'single' ? 1 : shape === 'controlled' || shape === 'swap' ? 2 : 3;
+  if (shape === 'single' || shape === 'measure') return 1;
+  if (shape === 'controlled' || shape === 'swap') return 2;
+  return 3;
 }
 
 /** Aliases from stored/backend gate names to builder palette keys. */
@@ -260,8 +264,16 @@ export function operationsToPlacements(
   const out: GatePlacement[] = [];
   operations.forEach((op, i) => {
     const def = gateDef(op.gate);
+    if (!def) return;
     const targets = op.targets ?? [];
-    if (!def || targets.length !== gateWireCount(def.shape)) return;
+    // A measurement can name several qubits at once — draw one meter per wire.
+    if (def.shape === 'measure') {
+      targets.forEach((q, j) =>
+        out.push({ id: `${makeId(i)}-${j}`, gateType: 'measure', column: i, wires: [q] }),
+      );
+      return;
+    }
+    if (targets.length !== gateWireCount(def.shape)) return;
     out.push({
       id: makeId(i),
       gateType: def.type,

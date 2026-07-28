@@ -186,12 +186,23 @@ describe('operationsToPlacements', () => {
     ]);
   });
 
-  it('skips operations the builder cannot represent (e.g. measure)', () => {
+  it('skips operations the builder cannot represent (e.g. barrier)', () => {
     const placements = operationsToPlacements(
-      [{ gate: 'h', targets: [0] }, { gate: 'measure', targets: [0] }],
+      [{ gate: 'h', targets: [0] }, { gate: 'barrier', targets: [0] }],
       id,
     );
     expect(placements.map((p) => p.gateType)).toEqual(['h']);
+  });
+
+  it('represents measurement, splitting a multi-qubit measure into one meter per wire', () => {
+    expect(placementsToOperations([P({ gateType: 'measure', wires: [1] })], 2)).toEqual([
+      { gate: 'measure', targets: [1] },
+    ]);
+    const pl = operationsToPlacements([{ gate: 'measure', targets: [0, 1] }], id);
+    expect(pl.map((p) => ({ gateType: p.gateType, wires: p.wires }))).toEqual([
+      { gateType: 'measure', wires: [0] },
+      { gateType: 'measure', wires: [1] },
+    ]);
   });
 
   it('round-trips a SWAP + Toffoli circuit through placements', () => {
