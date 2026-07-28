@@ -120,3 +120,96 @@ export function gatesToOperations(
 
   return operations;
 }
+
+/**
+ * A gate the user has placed at an explicit position on the canvas: a specific
+ * qubit wire and time column. Two-qubit gates additionally carry a `target`
+ * wire. This is the model behind manual (drag-and-drop) circuit editing.
+ */
+export interface GatePlacement {
+  id: string;
+  gateType: string;
+  /** wire the gate sits on (control wire for two-qubit gates) */
+  qubit: number;
+  /** time column (left-to-right order) */
+  column: number;
+  /** target wire for two-qubit gates */
+  target?: number;
+  /** rotation angle for parameterised gates */
+  param?: number;
+}
+
+/** A placement can be simulated iff its wires are valid for the circuit. */
+export function isPlaceable(p: GatePlacement, numQubits: number): boolean {
+  const spec = GATE_SPECS[p.gateType];
+  if (!spec || p.qubit < 0 || p.qubit >= numQubits) return false;
+  if (spec.arity === 2) {
+    return (
+      p.target != null && p.target >= 0 && p.target < numQubits && p.target !== p.qubit
+    );
+  }
+  return true;
+}
+
+/**
+ * Convert explicitly-placed gates into backend operations. Placements are
+ * ordered by column (then control wire) so the time-sequence is preserved, and
+ * any placement that no longer fits the circuit (e.g. a wire removed by
+ * lowering the qubit count) is dropped.
+ */
+export function placementsToOperations(
+  placements: GatePlacement[],
+  numQubits: number,
+): SimulationOperation[] {
+  return placements
+    .filter((p) => isPlaceable(p, numQubits))
+    .slice()
+    .sort((a, b) => a.column - b.column || a.qubit - b.qubit)
+    .map((p) => {
+      const spec = GATE_SPECS[p.gateType];
+      if (spec.arity === 2) {
+        return { gate: p.gateType, targets: [p.qubit, p.target as number] };
+      }
+      if (spec.hasParam) {
+        return {
+          gate: p.gateType,
+          targets: [p.qubit],
+          params: [p.param ?? spec.defaultParam ?? Math.PI / 2],
+        };
+      }
+      return { gate: p.gateType, targets: [p.qubit] };
+    });
+}
+
+/**
+ * Rebuild placements from stored operations when loading a saved circuit.
+ * Each operation is assigned to its stored target wire(s) and laid out in one
+ * column per operation, preserving order left-to-right.
+ */
+export function operationsToPlacements(
+  operations: Array<{ gate: string; targets?: number[]; params?: number[] }>,
+  makeId: (i: number) => string,
+): GatePlacement[] {
+  return operations.map((op, i) => {
+    const gate = op.gate.toLowerCase();
+    const type = PALETTE_ALIASES[gate] ?? gate;
+    const spec = GATE_SPECS[type];
+    const targets = op.targets ?? [];
+    if (spec?.arity === 2) {
+      return {
+        id: makeId(i),
+        gateType: type,
+        qubit: targets[0] ?? 0,
+        target: targets[1] ?? 1,
+        column: i,
+      };
+    }
+    return {
+      id: makeId(i),
+      gateType: type,
+      qubit: targets[0] ?? 0,
+      column: i,
+      param: op.params?.[0],
+    };
+  });
+}
