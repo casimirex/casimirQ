@@ -321,7 +321,9 @@ export function CircuitBuilder() {
   const createMut = useCreateCircuit();
   const updateMut = useUpdateCircuit();
   const deleteMut = useDeleteCircuit();
-  const { data: listData } = useCircuits(1, 50);
+  // Fetch a large page so personal circuits still appear even alongside the
+  // many seeded "Library · " circuits (which are filtered out below).
+  const { data: listData } = useCircuits(1, 500);
   const circuitQuery = useCircuit(id ?? null);
 
   const saving = createMut.isPending || updateMut.isPending;
@@ -514,7 +516,8 @@ export function CircuitBuilder() {
     });
   };
 
-  const savedCircuits = listData?.circuits ?? [];
+  // Exclude the seeded Circuit Library entries — they live under their own nav.
+  const savedCircuits = (listData?.circuits ?? []).filter((c) => !c.name.startsWith('Library · '));
 
   return (
     <div className="space-y-4">
