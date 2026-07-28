@@ -57,6 +57,7 @@ const GATE_COLORS: Record<string, { bg: string; ring: string }> = {
   y: { bg: 'bg-green-500', ring: 'ring-green-300' },
   z: { bg: 'bg-blue-500', ring: 'ring-blue-300' },
   cnot: { bg: 'bg-amber-500', ring: 'ring-amber-300' },
+  meas: { bg: 'bg-slate-500', ring: 'ring-slate-300' },
 };
 
 // ---- Canvas geometry: gates snap onto horizontal qubit wires (lanes) ----
@@ -70,7 +71,7 @@ const WIRE_COLOR = '#2a3d5c';
 const laneY = (q: number) => TOP + q * LANE_GAP;
 
 /** How a single wire's symbol is drawn. */
-type SymbolKind = 'tile' | 'dot' | 'plus' | 'x';
+type SymbolKind = 'tile' | 'dot' | 'plus' | 'x' | 'meter';
 interface GateNodeData {
   kind: SymbolKind;
   gateType: string;
@@ -142,6 +143,34 @@ function GateNode({ data, selected }: NodeProps<GateNodeData>) {
           <line x1={GATE / 2 - 8} y1={GATE / 2 + 8} x2={GATE / 2 + 8} y2={GATE / 2 - 8} stroke={AMBER} strokeWidth={2.6} />
           {selected && <circle cx={GATE / 2} cy={GATE / 2} r={13} fill="none" stroke={AMBER} strokeWidth={1.5} strokeDasharray="3 2" />}
         </svg>
+      </div>
+    );
+  }
+
+  if (data.kind === 'meter') {
+    return (
+      <div style={box} className="relative" title="Measure — drag to move, Delete to remove">
+        <div
+          className={selected ? 'ring-2 ring-offset-2 ring-offset-background ring-slate-300' : ''}
+          style={{
+            position: 'absolute',
+            left: GATE / 2 - 17,
+            top: GATE / 2 - 17,
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            background: '#334155',
+            border: '1px solid #64748b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg width={22} height={16} viewBox="0 0 22 16">
+            <path d="M 3 13 A 8 8 0 0 1 19 13" fill="none" stroke="#e2e8f0" strokeWidth={1.6} />
+            <line x1={11} y1={13} x2={17} y2={4.5} stroke="#e2e8f0" strokeWidth={1.6} />
+          </svg>
+        </div>
       </div>
     );
   }
@@ -218,6 +247,8 @@ function gateSymbols(def: GateDef, wires: number[]): { wire: number; kind: Symbo
   switch (def.shape) {
     case 'single':
       return [{ wire: wires[0], kind: 'tile' }];
+    case 'measure':
+      return [{ wire: wires[0], kind: 'meter' }];
     case 'controlled':
       return [{ wire: wires[0], kind: 'dot' }, { wire: wires[1], kind: boxOrKind }];
     case 'swap':
